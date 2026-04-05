@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#e63946;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#d62839;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="heartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ff6b6b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#e63946;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background Circle -->
+  <circle cx="60" cy="60" r="55" fill="url(#gradient)" />
+  
+  <!-- Inner Circle -->
+  <circle cx="60" cy="60" r="48" fill="#fff" fill-opacity="0.15" />
+  
+  <!-- Heart with Pulse Line -->
+  <g transform="translate(60,60)">
+    <!-- Heart Shape -->
+    <path d="M0-15 C-20-35 -45-10 -25 15 L0 40 L25 15 C45-10 20-35 0-15Z" 
+          fill="white" 
+          transform="scale(0.8) translate(0,-5)" />
+    
+    <!-- Pulse Line -->
+    <polyline points="-25,5 -15,5 -10,-10 -5,15 0,-5 5,10 10,0 15,5 25,5" 
+              fill="none" 
+              stroke="url(#gradient)" 
+              stroke-width="3" 
+              stroke-linecap="round" 
+              stroke-linejoin="round" />
+  </g>
+  
+  <!-- Plus Signs (Medical Symbol) -->
+  <g fill="white" fill-opacity="0.3">
+    <rect x="18" y="25" width="8" height="3" rx="1" />
+    <rect x="20.5" y="22.5" width="3" height="8" rx="1" />
+    
+    <rect x="94" y="75" width="8" height="3" rx="1" />
+    <rect x="96.5" y="72.5" width="3" height="8" rx="1" />
+    
+    <rect x="85" y="30" width="6" height="2.5" rx="1" />
+    <rect x="86.75" y="28.25" width="2.5" height="6" rx="1" />
+    
+    <rect x="27" y="82" width="6" height="2.5" rx="1" />
+    <rect x="28.75" y="80.25" width="2.5" height="6" rx="1" />
+  </g>
+</svg>
