@@ -53,7 +53,7 @@ const register = asyncHandler(async (req, res) => {
     email,
     phone,
     password,
-    role: role || 'user',
+    role: role || 'doctor',
   });
 
   // Log registration

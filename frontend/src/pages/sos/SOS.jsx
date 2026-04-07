@@ -19,7 +19,7 @@ import Modal from '../../components/common/Modal';
 import toast from 'react-hot-toast';
 
 const SOS = () => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { emitSOS, isConnected } = useSocket();
   const [sosActive, setSosActive] = useState(false);
   const [activeSOS, setActiveSOS] = useState(null);
@@ -45,6 +45,7 @@ const SOS = () => {
           setLocation({
             lat: position.coords.latitude,
             lng: position.coords.longitude,
+            accuracy: position.coords.accuracy,
           });
           setLocationError(null);
         },
@@ -67,11 +68,11 @@ const SOS = () => {
   // Check for active SOS alerts
   const checkActiveAlerts = async () => {
     try {
-      const response = await sosAPI.getMy();
+      if (!isAuthenticated) return;
+
+      const response = await sosAPI.getActive();
       if (response.data.success) {
-        const active = response.data.alerts?.find(
-          (a) => a.status === 'active' || a.status === 'responded'
-        );
+        const active = response.data.alert;
         if (active) {
           setActiveSOS(active);
           setSosActive(true);
@@ -119,12 +120,15 @@ const SOS = () => {
 
     try {
       const sosData = {
+        type: 'sos',
         location: {
           type: 'Point',
           coordinates: [location.lng, location.lat],
+          accuracy: location.accuracy,
         },
-        message: 'Emergency SOS Alert!',
-        alertType: 'sos',
+        description: 'Emergency SOS Alert!',
+        contactName: user?.name,
+        contactPhone: user?.phone,
       };
 
       // Emit via socket for real-time
@@ -155,10 +159,7 @@ const SOS = () => {
 
     setLoading(true);
     try {
-      const response = await sosAPI.updateStatus(activeSOS._id, {
-        status: 'cancelled',
-        message: 'Alert cancelled by user',
-      });
+      const response = await sosAPI.cancel(activeSOS._id);
 
       if (response.data.success) {
         setSosActive(false);
@@ -179,10 +180,7 @@ const SOS = () => {
 
     setLoading(true);
     try {
-      const response = await sosAPI.updateStatus(activeSOS._id, {
-        status: 'resolved',
-        message: 'User marked as safe',
-      });
+      const response = await sosAPI.cancel(activeSOS._id);
 
       if (response.data.success) {
         setSosActive(false);

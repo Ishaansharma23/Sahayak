@@ -31,8 +31,16 @@ const AdminDashboard = () => {
     try {
       const response = await adminAPI.getDashboard();
       if (response.data.success) {
-        setStats(response.data.stats);
-        setRecentAlerts(response.data.recentAlerts || []);
+        const apiStats = response.data.stats || {};
+        setStats({
+          totalUsers: apiStats.users?.total || 0,
+          totalHospitals: apiStats.hospitals?.total || 0,
+          totalDoctors: apiStats.doctors?.total || 0,
+          activeEmergencies: apiStats.emergencies?.active || 0,
+          activeSOS: apiStats.sos?.active || 0,
+          pendingVerifications: (apiStats.hospitals?.pending || 0) + (apiStats.doctors?.pending || 0),
+        });
+        setRecentAlerts(apiStats.recentEmergencies || []);
       }
     } catch (error) {
       console.error('Error fetching dashboard:', error);

@@ -66,22 +66,33 @@ const ManageUsers = () => {
     fetchUsers();
   };
 
-  const handleUpdateUser = async (userId, data) => {
+  const handleUpdateUserRole = async (userId, role) => {
     try {
-      const response = await adminAPI.updateUser(userId, data);
+      const response = await adminAPI.updateUserRole(userId, { role });
       if (response.data.success) {
-        toast.success('User updated successfully');
+        toast.success('User role updated');
         fetchUsers();
         setShowEditModal(false);
       }
     } catch (error) {
-      toast.error('Failed to update user');
+      toast.error('Failed to update role');
       console.error('Update error:', error);
     }
   };
 
   const handleToggleStatus = async (user) => {
-    await handleUpdateUser(user._id, { isActive: !user.isActive });
+    if (!user?._id) return;
+    try {
+      const response = await adminAPI.toggleUserStatus(user._id);
+      if (response.data.success) {
+        toast.success('User status updated');
+        fetchUsers();
+        setShowEditModal(false);
+      }
+    } catch (error) {
+      toast.error('Failed to update status');
+      console.error('Status update error:', error);
+    }
   };
 
   const getRoleColor = (role) => {
@@ -286,7 +297,7 @@ const ManageUsers = () => {
             <Input
               label="Name"
               value={selectedUser.name}
-              onChange={(e) => setSelectedUser(prev => ({ ...prev, name: e.target.value }))}
+              disabled
             />
             <Input
               label="Email"
@@ -297,7 +308,7 @@ const ManageUsers = () => {
             <Input
               label="Phone"
               value={selectedUser.phone}
-              onChange={(e) => setSelectedUser(prev => ({ ...prev, phone: e.target.value }))}
+              disabled
             />
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -319,7 +330,7 @@ const ManageUsers = () => {
               <Button variant="secondary" onClick={() => setShowEditModal(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => handleUpdateUser(selectedUser._id, selectedUser)}>
+              <Button onClick={() => handleUpdateUserRole(selectedUser._id, selectedUser.role)}>
                 Save Changes
               </Button>
             </div>

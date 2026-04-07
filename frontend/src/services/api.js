@@ -25,12 +25,6 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized - redirect to login
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
-    }
     return Promise.reject(error);
   }
 );
@@ -73,14 +67,16 @@ export const doctorAPI = {
 
 // Emergency API
 export const emergencyAPI = {
-  getAll: (params) => api.get('/emergency', { params }),
-  getById: (id) => api.get(`/emergency/${id}`),
-  create: (data) => api.post('/emergency', data),
-  update: (id, data) => api.put(`/emergency/${id}`, data),
-  updateStatus: (id, data) => api.put(`/emergency/${id}/status`, data),
-  assignAmbulance: (id, data) => api.put(`/emergency/${id}/assign`, data),
-  getMyEmergencies: () => api.get('/emergency/my'),
-  getActive: () => api.get('/emergency/active'),
+  getAll: (params) => api.get('/emergencies', { params }),
+  getById: (id) => api.get(`/emergencies/${id}`),
+  create: (data) => api.post('/emergencies', data),
+  updateStatus: (id, data) => api.put(`/emergencies/${id}/status`, data),
+  accept: (id, data) => api.put(`/emergencies/${id}/accept`, data),
+  updateLocation: (id, data) => api.put(`/emergencies/${id}/location`, data),
+  cancel: (id, data) => api.put(`/emergencies/${id}/cancel`, data),
+  getMyEmergencies: () => api.get('/emergencies/my-requests'),
+  getHospitalEmergencies: (hospitalId, params) => api.get(`/emergencies/hospital/${hospitalId}`, { params }),
+  getActiveEmergencies: (hospitalId) => api.get(`/emergencies/hospital/${hospitalId}/active`),
 };
 
 // SOS API
@@ -88,21 +84,27 @@ export const sosAPI = {
   trigger: (data) => api.post('/sos', data),
   getActive: () => api.get('/sos/active'),
   getById: (id) => api.get(`/sos/${id}`),
-  updateStatus: (id, data) => api.put(`/sos/${id}/status`, data),
-  respond: (id, data) => api.post(`/sos/${id}/respond`, data),
-  getMy: () => api.get('/sos/my'),
-  getNearby: (params) => api.get('/sos/nearby', { params }),
+  updateLocation: (id, data) => api.put(`/sos/${id}/location`, data),
+  cancel: (id, data) => api.put(`/sos/${id}/cancel`, data),
+  markFalseAlarm: (id, data) => api.put(`/sos/${id}/false-alarm`, data),
+  acknowledge: (id, data) => api.put(`/sos/${id}/acknowledge`, data),
+  resolve: (id, data) => api.put(`/sos/${id}/resolve`, data),
+  getHistory: () => api.get('/sos/history'),
 };
 
 // Admin API
 export const adminAPI = {
   getDashboard: () => api.get('/admin/dashboard'),
   getUsers: (params) => api.get('/admin/users', { params }),
-  updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
-  getHospitals: (params) => api.get('/admin/hospitals', { params }),
+  updateUserRole: (id, data) => api.put(`/admin/users/${id}/role`, data),
+  toggleUserStatus: (id) => api.put(`/admin/users/${id}/toggle-status`),
+  getPendingHospitals: (params) => api.get('/admin/hospitals/pending', { params }),
   verifyHospital: (id, data) => api.put(`/admin/hospitals/${id}/verify`, data),
-  getDoctors: (params) => api.get('/admin/doctors', { params }),
+  rejectHospital: (id, data) => api.put(`/admin/hospitals/${id}/reject`, data),
+  suspendHospital: (id, data) => api.put(`/admin/hospitals/${id}/suspend`, data),
+  getPendingDoctors: (params) => api.get('/admin/doctors/pending', { params }),
   verifyDoctor: (id, data) => api.put(`/admin/doctors/${id}/verify`, data),
+  rejectDoctor: (id, data) => api.put(`/admin/doctors/${id}/reject`, data),
   getEmergencies: (params) => api.get('/admin/emergencies', { params }),
   getSOSAlerts: (params) => api.get('/admin/sos', { params }),
   getAuditLogs: (params) => api.get('/admin/audit-logs', { params }),

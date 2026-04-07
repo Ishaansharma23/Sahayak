@@ -38,7 +38,7 @@ const Dashboard = () => {
             const response = await hospitalAPI.getNearby({
               lat: latitude,
               lng: longitude,
-              radius: 10,
+              maxDistance: 10,
               limit: 5,
             });
             if (response.data.success) {

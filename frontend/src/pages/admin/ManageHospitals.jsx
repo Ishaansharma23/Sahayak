@@ -6,7 +6,7 @@ import {
   HiX,
   HiEye,
 } from 'react-icons/hi';
-import { adminAPI } from '../../services/api';
+import { adminAPI, hospitalAPI } from '../../services/api';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
@@ -34,9 +34,12 @@ const ManageHospitals = () => {
         page: pagination.page,
         limit: pagination.limit,
         search: searchQuery,
-        verified: filter === 'verified' ? true : filter === 'pending' ? false : undefined,
+        verified: filter === 'verified' ? 'true' : undefined,
       };
-      const response = await adminAPI.getHospitals(params);
+
+      const response = filter === 'pending'
+        ? await adminAPI.getPendingHospitals({ page: pagination.page, limit: pagination.limit })
+        : await hospitalAPI.getAll(params);
       if (response.data.success) {
         setHospitals(response.data.hospitals || []);
         setPagination(prev => ({ ...prev, total: response.data.total || 0 }));
@@ -45,9 +48,9 @@ const ManageHospitals = () => {
       console.error('Error fetching hospitals:', error);
       // Mock data
       setHospitals([
-        { _id: '1', name: 'City General Hospital', address: { city: 'Mumbai', state: 'Maharashtra' }, isVerified: true, beds: { total: 200, available: 45 } },
-        { _id: '2', name: 'Apollo Hospital', address: { city: 'Delhi', state: 'Delhi' }, isVerified: true, beds: { total: 500, available: 120 } },
-        { _id: '3', name: 'New Care Hospital', address: { city: 'Bangalore', state: 'Karnataka' }, isVerified: false, beds: { total: 100, available: 30 } },
+        { _id: '1', name: 'City General Hospital', address: { city: 'Mumbai', state: 'Maharashtra' }, verified: true, beds: { total: 200, available: 45 } },
+        { _id: '2', name: 'Apollo Hospital', address: { city: 'Delhi', state: 'Delhi' }, verified: true, beds: { total: 500, available: 120 } },
+        { _id: '3', name: 'New Care Hospital', address: { city: 'Bangalore', state: 'Karnataka' }, verified: false, beds: { total: 100, available: 30 } },
       ]);
     } finally {
       setLoading(false);
@@ -56,7 +59,9 @@ const ManageHospitals = () => {
 
   const handleVerify = async (hospitalId, verified) => {
     try {
-      const response = await adminAPI.verifyHospital(hospitalId, { isVerified: verified });
+      const response = verified
+        ? await adminAPI.verifyHospital(hospitalId)
+        : await adminAPI.rejectHospital(hospitalId, { reason: 'Verification rejected' });
       if (response.data.success) {
         toast.success(verified ? 'Hospital verified' : 'Verification revoked');
         fetchHospitals();
@@ -151,11 +156,11 @@ const ManageHospitals = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 text-xs rounded-full ${
-                        hospital.isVerified
+                        hospital.verified
                           ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                           : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
                       }`}>
-                        {hospital.isVerified ? 'Verified' : 'Pending'}
+                        {hospital.verified ? 'Verified' : 'Pending'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -169,7 +174,7 @@ const ManageHospitals = () => {
                         >
                           <HiEye className="w-4 h-4 text-gray-500" />
                         </button>
-                        {!hospital.isVerified ? (
+                        {!hospital.verified ? (
                           <button
                             onClick={() => handleVerify(hospital._id, true)}
                             className="p-2 hover:bg-green-100 dark:hover:bg-green-900/30 rounded-lg"
@@ -227,7 +232,7 @@ const ManageHospitals = () => {
               <Button variant="secondary" onClick={() => setShowModal(false)}>
                 Close
               </Button>
-              {!selectedHospital.isVerified && (
+              {!selectedHospital.verified && (
                 <Button
                   variant="success"
                   icon={HiShieldCheck}

@@ -13,7 +13,7 @@ const Register = () => {
     phone: '',
     password: '',
     confirmPassword: '',
-    role: 'user',
+    role: 'doctor',
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -62,8 +62,7 @@ const Register = () => {
     if (!validate()) return;
 
     setLoading(true);
-    const { confirmPassword, ...userData } = formData;
-    const result = await register(userData);
+    const result = await register(formData);
     setLoading(false);
 
     if (result.success) {
@@ -85,10 +84,10 @@ const Register = () => {
               <HiHeart className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Create Account
+              Staff Registration
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Join LifeLine for emergency services
+              Register for doctor or hospital admin access
             </p>
           </div>
 
@@ -161,8 +160,8 @@ const Register = () => {
               </label>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { value: 'user', label: 'User', desc: 'Access emergency services' },
-                  { value: 'hospital_admin', label: 'Hospital', desc: 'Manage hospital' },
+                  { value: 'doctor', label: 'Doctor', desc: 'Manage schedule and requests' },
+                  { value: 'hospital_admin', label: 'Hospital', desc: 'Manage hospital resources' },
                 ].map((option) => (
                   <label
                     key={option.value}

@@ -74,29 +74,29 @@ export const SocketProvider = ({ children }) => {
       });
 
       // Handle SOS alerts for responders
-      newSocket.on('sos:new_alert', (data) => {
-        toast.error(`SOS Alert: ${data.message}`, {
+      newSocket.on('sosAlert', (data) => {
+        toast.error('SOS Alert received', {
           duration: 15000,
           icon: '🆘',
         });
         setNotifications(prev => [{
           type: 'sos_alert',
-          message: data.message,
+          message: 'New SOS alert',
           data: data,
           timestamp: new Date(),
         }, ...prev].slice(0, 50));
       });
 
       // Handle emergency updates
-      newSocket.on('emergency:status_update', (data) => {
-        toast(data.message, {
+      newSocket.on('emergencyUpdate', (data) => {
+        toast(data.message || 'Emergency updated', {
           icon: '🚑',
           duration: 5000,
         });
       });
 
       // Handle bed availability updates
-      newSocket.on('hospital:bed_update', (data) => {
+      newSocket.on('bedUpdate', (data) => {
         setNotifications(prev => [{
           type: 'bed_update',
           message: `Bed availability updated at ${data.hospitalName}`,

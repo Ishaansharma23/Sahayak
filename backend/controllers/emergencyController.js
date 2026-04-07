@@ -1,7 +1,64 @@
-const { Emergency, Hospital, AuditLog } = require('../models');
+const crypto = require('crypto');
+const { Emergency, Hospital, AuditLog, User } = require('../models');
 const { asyncHandler, ErrorResponse } = require('../middleware/errorHandler');
 const { getPagination, paginationResponse, estimateArrivalTime, calculateDistance } = require('../utils/helpers');
 const { sendAmbulanceDispatchEmail } = require('../utils/email');
+
+const TYPE_ALIAS = {
+  medical: 'ambulance',
+  accident: 'ambulance',
+  cardiac: 'ambulance',
+  trauma: 'ambulance',
+  pregnancy: 'ambulance',
+  other: 'other',
+};
+
+const normalizeEmergencyPayload = (body) => {
+  const normalizedType = TYPE_ALIAS[body.type] || body.type || 'ambulance';
+  const patientInfo = body.patientInfo || body.patient || {
+    name: body.patientName,
+    age: body.patientAge,
+    condition: body.patientCondition,
+    phone: body.contactPhone,
+  };
+  const pickupLocation = body.pickupLocation || body.location || {};
+  const hospitalId = body.hospitalId || body.hospital;
+  const notes = body.notes || body.message || body.description;
+
+  return {
+    type: normalizedType,
+    priority: body.priority,
+    patientInfo,
+    pickupLocation,
+    hospitalId,
+    notes,
+  };
+};
+
+const getOrCreateGuestUser = async (patientInfo) => {
+  const phone = patientInfo?.phone;
+  if (!phone) {
+    throw new ErrorResponse('Contact phone is required for emergency requests', 400);
+  }
+
+  const existing = await User.findOne({ phone });
+  if (existing) {
+    return existing;
+  }
+
+  const safePhone = phone.replace(/\D/g, '') || Date.now().toString();
+  const password = crypto.randomBytes(16).toString('hex');
+
+  return User.create({
+    name: patientInfo?.name || 'Guest User',
+    email: `guest+${safePhone}@lifeline.local`,
+    phone,
+    password,
+    role: 'user',
+    isVerified: true,
+    isActive: true,
+  });
+};
 
 /**
  * @desc    Create emergency request (ambulance, bed, etc.)
@@ -9,7 +66,16 @@ const { sendAmbulanceDispatchEmail } = require('../utils/email');
  * @access  Private
  */
 const createEmergency = asyncHandler(async (req, res) => {
-  const { type, priority, patientInfo, pickupLocation, hospitalId, notes } = req.body;
+  const { type, priority, patientInfo, pickupLocation, hospitalId, notes } = normalizeEmergencyPayload(req.body);
+
+  if (!patientInfo?.name) {
+    throw new ErrorResponse('Patient name is required', 400);
+  }
+  if (!pickupLocation?.coordinates?.length) {
+    throw new ErrorResponse('Pickup location is required', 400);
+  }
+
+  const requester = req.user || await getOrCreateGuestUser(patientInfo);
 
   let hospital = null;
   let destinationLocation = null;
@@ -60,7 +126,7 @@ const createEmergency = asyncHandler(async (req, res) => {
   const emergency = await Emergency.create({
     type,
     priority: priority || 'high',
-    requestedBy: req.user.id,
+    requestedBy: requester.id,
     patientInfo,
     pickupLocation: {
       type: 'Point',
@@ -101,9 +167,9 @@ const createEmergency = asyncHandler(async (req, res) => {
 
   // Log action
   await AuditLog.log({
-    user: req.user._id,
-    userEmail: req.user.email,
-    userRole: req.user.role,
+    user: requester._id,
+    userEmail: requester.email,
+    userRole: requester.role,
     action: 'emergency_request',
     category: 'emergency',
     resource: { type: 'Emergency', id: emergency._id, name: emergency.requestId },
@@ -179,7 +245,7 @@ const getEmergency = asyncHandler(async (req, res) => {
   }
 
   // Check authorization
-  if (req.user.role === 'user' && emergency.requestedBy._id.toString() !== req.user.id) {
+  if (req.user && req.user.role === 'user' && emergency.requestedBy._id.toString() !== req.user.id) {
     throw new ErrorResponse('Not authorized', 403);
   }
 
@@ -232,6 +298,54 @@ const getActiveEmergencies = asyncHandler(async (req, res) => {
     success: true,
     count: emergencies.length,
     emergencies,
+  });
+});
+
+/**
+ * @desc    Accept emergency request
+ * @route   PUT /api/emergencies/:id/accept
+ * @access  Private (Hospital Admin, Super Admin)
+ */
+const acceptEmergency = asyncHandler(async (req, res) => {
+  const { note } = req.body;
+
+  const emergency = await Emergency.findById(req.params.id);
+
+  if (!emergency) {
+    throw new ErrorResponse('Emergency not found', 404);
+  }
+
+  if (emergency.status !== 'requested') {
+    throw new ErrorResponse('Emergency cannot be accepted in its current state', 400);
+  }
+
+  await emergency.updateStatus('accepted', req.user.id, note || 'Emergency accepted');
+
+  await AuditLog.log({
+    user: req.user._id,
+    userEmail: req.user.email,
+    userRole: req.user.role,
+    action: 'emergency_accept',
+    category: 'emergency',
+    resource: { type: 'Emergency', id: emergency._id, name: emergency.requestId },
+    details: { note },
+    ipAddress: req.ip,
+    status: 'success',
+  });
+
+  const io = req.app.get('io');
+  if (io) {
+    io.emit('emergencyUpdate', {
+      emergencyId: emergency._id,
+      requestId: emergency.requestId,
+      status: emergency.status,
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'Emergency accepted',
+    emergency,
   });
 });
 
@@ -546,6 +660,7 @@ module.exports = {
   getEmergency,
   getHospitalEmergencies,
   getActiveEmergencies,
+  acceptEmergency,
   updateEmergencyStatus,
   updateAmbulanceLocation,
   cancelEmergency,

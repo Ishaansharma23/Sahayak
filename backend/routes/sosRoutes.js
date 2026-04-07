@@ -14,39 +14,39 @@ const {
   getSOSHistory,
 } = require('../controllers/sosController');
 
-const { protect, authorize } = require('../middleware/auth');
+const { protect, optionalAuth, authorize } = require('../middleware/auth');
 const { sosLimiter } = require('../middleware/rateLimiter');
 const { sosValidators } = require('../validators');
 
-// All routes are protected
-router.use(protect);
-
 // User routes
-router.post('/', sosLimiter, sosValidators.create, triggerSOS);
-router.get('/active', getActiveSOS);
-router.get('/history', getSOSHistory);
-router.get('/:id', getSOSAlert);
-router.put('/:id/location', sosValidators.locationUpdate, updateSOSLocation);
-router.put('/:id/cancel', cancelSOS);
-router.put('/:id/false-alarm', markFalseAlarm);
+router.post('/', optionalAuth, sosLimiter, sosValidators.create, triggerSOS);
+router.get('/active', protect, getActiveSOS);
+router.get('/history', protect, getSOSHistory);
+router.get('/:id', optionalAuth, getSOSAlert);
+router.put('/:id/location', optionalAuth, sosValidators.locationUpdate, updateSOSLocation);
+router.put('/:id/cancel', optionalAuth, cancelSOS);
+router.put('/:id/false-alarm', optionalAuth, markFalseAlarm);
 
 // Hospital Admin / Super Admin routes
-router.get('/all/active', authorize('hospital_admin', 'super_admin'), getAllActiveSOS);
+router.get('/all/active', protect, authorize('hospital_admin', 'super_admin'), getAllActiveSOS);
 
 router.put(
   '/:id/acknowledge',
+  protect,
   authorize('hospital_admin', 'super_admin'),
   acknowledgeSOS
 );
 
 router.post(
   '/:id/responders',
+  protect,
   authorize('hospital_admin', 'super_admin'),
   addResponder
 );
 
 router.put(
   '/:id/resolve',
+  protect,
   authorize('hospital_admin', 'super_admin'),
   resolveSOS
 );

@@ -30,19 +30,18 @@ const EmergencyTrack = () => {
   useEffect(() => {
     if (socket && emergency) {
       // Join emergency room for real-time updates
-      socket.emit('join_room', `emergency_${id}`);
+      socket.emit('trackEmergency', id);
 
-      socket.on('emergency:location_update', (data) => {
+      socket.on('ambulanceLocation', (data) => {
         if (data.emergencyId === id) {
           setEmergency(prev => ({
             ...prev,
-            ambulanceLocation: data.location,
-            eta: data.eta,
+            currentLocation: data.location,
           }));
         }
       });
 
-      socket.on('emergency:status_update', (data) => {
+      socket.on('emergencyUpdate', (data) => {
         if (data.emergencyId === id) {
           setEmergency(prev => ({
             ...prev,
@@ -52,9 +51,9 @@ const EmergencyTrack = () => {
       });
 
       return () => {
-        socket.emit('leave_room', `emergency_${id}`);
-        socket.off('emergency:location_update');
-        socket.off('emergency:status_update');
+        socket.emit('stopTrackingEmergency', id);
+        socket.off('ambulanceLocation');
+        socket.off('emergencyUpdate');
       };
     }
   }, [socket, emergency, id]);
@@ -74,23 +73,27 @@ const EmergencyTrack = () => {
 
   const getStatusColor = (status) => {
     const colors = {
-      pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-      confirmed: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-      dispatched: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-      'en-route': 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
-      arrived: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-      completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-      cancelled: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+      requested: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+      accepted: 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+      dispatched: 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+      on_the_way: 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-200',
+      arrived_pickup: 'bg-gray-300 text-gray-900 dark:bg-gray-600 dark:text-gray-100',
+      en_route_hospital: 'bg-gray-300 text-gray-900 dark:bg-gray-600 dark:text-gray-100',
+      arrived_hospital: 'bg-gray-300 text-gray-900 dark:bg-gray-600 dark:text-gray-100',
+      completed: 'bg-gray-900 text-white dark:bg-white dark:text-gray-900',
+      cancelled: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
     };
-    return colors[status] || colors.pending;
+    return colors[status] || colors.requested;
   };
 
   const statusSteps = [
-    { id: 'pending', label: 'Request Received', icon: HiCheck },
-    { id: 'confirmed', label: 'Confirmed', icon: HiCheck },
+    { id: 'requested', label: 'Request Received', icon: HiCheck },
+    { id: 'accepted', label: 'Accepted', icon: HiCheck },
     { id: 'dispatched', label: 'Ambulance Dispatched', icon: HiTruck },
-    { id: 'en-route', label: 'En Route', icon: HiLocationMarker },
-    { id: 'arrived', label: 'Arrived', icon: HiOfficeBuilding },
+    { id: 'on_the_way', label: 'On the Way', icon: HiLocationMarker },
+    { id: 'arrived_pickup', label: 'Arrived at Pickup', icon: HiOfficeBuilding },
+    { id: 'en_route_hospital', label: 'En Route to Hospital', icon: HiLocationMarker },
+    { id: 'arrived_hospital', label: 'Arrived at Hospital', icon: HiOfficeBuilding },
     { id: 'completed', label: 'Completed', icon: HiCheck },
   ];
 
@@ -122,7 +125,7 @@ const EmergencyTrack = () => {
     <div className="max-w-2xl mx-auto space-y-6">
       {/* Back Button */}
       <Link
-        to="/dashboard"
+        to="/emergency"
         className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
       >
         <HiArrowLeft className="w-5 h-5" />
@@ -141,7 +144,7 @@ const EmergencyTrack = () => {
             </p>
           </div>
           <div className={`px-4 py-2 rounded-full font-medium ${getStatusColor(emergency.status)}`}>
-            {emergency.status?.replace('-', ' ').toUpperCase()}
+            {emergency.status?.replace(/_/g, ' ').toUpperCase()}
           </div>
         </div>
       </Card>
@@ -194,9 +197,9 @@ const EmergencyTrack = () => {
                   }`}>
                     {step.label}
                   </p>
-                  {isCurrent && emergency.status === 'en-route' && emergency.eta && (
+                  {isCurrent && emergency.status === 'on_the_way' && emergency.estimatedArrival && (
                     <p className="text-sm text-primary">
-                      ETA: {emergency.eta} minutes
+                      ETA: {new Date(emergency.estimatedArrival).toLocaleTimeString()}
                     </p>
                   )}
                 </div>
@@ -224,9 +227,9 @@ const EmergencyTrack = () => {
                 {emergency.ambulance.type || 'Emergency Vehicle'}
               </p>
             </div>
-            {emergency.ambulance.driverPhone && (
+            {emergency.ambulance.driver?.phone && (
               <a
-                href={`tel:${emergency.ambulance.driverPhone}`}
+                href={`tel:${emergency.ambulance.driver.phone}`}
                 className="ml-auto"
               >
                 <Button variant="success" icon={HiPhone}>

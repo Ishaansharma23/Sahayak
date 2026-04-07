@@ -36,13 +36,15 @@ const Hospitals = () => {
         page: pagination.page,
         limit: pagination.limit,
         search: searchQuery,
-        ...filters,
+        verified: filters.verified ? 'true' : undefined,
+        hasICU: filters.icu ? 'true' : undefined,
+        hasAmbulance: filters.emergency ? 'true' : undefined,
       };
 
       if (userLocation) {
         params.lat = userLocation.lat;
         params.lng = userLocation.lng;
-        params.radius = 50;
+        params.maxDistance = 50;
       }
 
       const response = await hospitalAPI.getAll(params);

@@ -1,19 +1,44 @@
+const crypto = require('crypto');
 const { SOSAlert, Hospital, User, AuditLog } = require('../models');
 const { asyncHandler, ErrorResponse } = require('../middleware/errorHandler');
 const { getPagination, paginationResponse } = require('../utils/helpers');
 const { sendSOSAlertEmail } = require('../utils/email');
 
+const getOrCreateGuestUser = async (name, phone) => {
+  const defaultEmail = 'guest@lifeline.local';
+  const defaultPhone = phone || '0000000000';
+
+  const existing = await User.findOne({ email: defaultEmail });
+  if (existing) {
+    return existing;
+  }
+
+  const password = crypto.randomBytes(16).toString('hex');
+
+  return User.create({
+    name: name || 'Guest User',
+    email: defaultEmail,
+    phone: defaultPhone,
+    password,
+    role: 'user',
+    isVerified: true,
+    isActive: true,
+  });
+};
+
 /**
  * @desc    Trigger SOS alert
  * @route   POST /api/sos
- * @access  Private
+ * @access  Private (optional for guest)
  */
 const triggerSOS = asyncHandler(async (req, res) => {
-  const { type, location, description, batteryLevel, isCharging } = req.body;
+  const { type, location, description, batteryLevel, isCharging, contactPhone, contactName } = req.body;
+
+  const requester = req.user || await getOrCreateGuestUser(contactName, contactPhone);
 
   // Check if user has active SOS
   const existingAlert = await SOSAlert.findOne({
-    user: req.user.id,
+    user: requester.id,
     status: { $in: ['active', 'acknowledged', 'responding'] },
   });
 
@@ -23,7 +48,7 @@ const triggerSOS = asyncHandler(async (req, res) => {
 
   // Create SOS alert
   const sosAlert = await SOSAlert.create({
-    user: req.user.id,
+    user: requester.id,
     type: type || 'sos',
     location: {
       type: 'Point',
@@ -46,7 +71,7 @@ const triggerSOS = asyncHandler(async (req, res) => {
   });
 
   // Get user with emergency contacts
-  const user = await User.findById(req.user.id);
+  const user = await User.findById(requester.id);
 
   // Notify emergency contacts
   if (user.emergencyContacts && user.emergencyContacts.length > 0) {
@@ -74,9 +99,9 @@ const triggerSOS = asyncHandler(async (req, res) => {
 
   // Log action
   await AuditLog.log({
-    user: req.user._id,
-    userEmail: req.user.email,
-    userRole: req.user.role,
+    user: requester._id,
+    userEmail: requester.email,
+    userRole: requester.role,
     action: 'sos_trigger',
     category: 'sos',
     resource: { type: 'SOSAlert', id: sosAlert._id, name: sosAlert.alertId },
@@ -144,7 +169,7 @@ const updateSOSLocation = asyncHandler(async (req, res) => {
     throw new ErrorResponse('SOS alert not found', 404);
   }
 
-  if (sosAlert.user.toString() !== req.user.id) {
+  if (!req.user || sosAlert.user.toString() !== req.user.id) {
     throw new ErrorResponse('Not authorized', 403);
   }
 
@@ -208,11 +233,13 @@ const getSOSAlert = asyncHandler(async (req, res) => {
   }
 
   // Check authorization
-  const isOwner = sosAlert.user._id.toString() === req.user.id;
-  const isAdmin = ['super_admin', 'hospital_admin'].includes(req.user.role);
+  if (req.user) {
+    const isOwner = sosAlert.user._id.toString() === req.user.id;
+    const isAdmin = ['super_admin', 'hospital_admin'].includes(req.user.role);
 
-  if (!isOwner && !isAdmin) {
-    throw new ErrorResponse('Not authorized', 403);
+    if (!isOwner && !isAdmin) {
+      throw new ErrorResponse('Not authorized', 403);
+    }
   }
 
   res.status(200).json({
@@ -233,22 +260,24 @@ const cancelSOS = asyncHandler(async (req, res) => {
     throw new ErrorResponse('SOS alert not found', 404);
   }
 
-  if (sosAlert.user.toString() !== req.user.id && req.user.role !== 'super_admin') {
+  if (req.user && sosAlert.user.toString() !== req.user.id && req.user.role !== 'super_admin') {
     throw new ErrorResponse('Not authorized', 403);
   }
 
-  await sosAlert.updateStatus('cancelled', req.user.id, 'Cancelled by user');
+  await sosAlert.updateStatus('cancelled', req.user?.id, 'Cancelled by user');
 
-  await AuditLog.log({
-    user: req.user._id,
-    userEmail: req.user.email,
-    userRole: req.user.role,
-    action: 'sos_cancel',
-    category: 'sos',
-    resource: { type: 'SOSAlert', id: sosAlert._id, name: sosAlert.alertId },
-    ipAddress: req.ip,
-    status: 'success',
-  });
+  if (req.user) {
+    await AuditLog.log({
+      user: req.user._id,
+      userEmail: req.user.email,
+      userRole: req.user.role,
+      action: 'sos_cancel',
+      category: 'sos',
+      resource: { type: 'SOSAlert', id: sosAlert._id, name: sosAlert.alertId },
+      ipAddress: req.ip,
+      status: 'success',
+    });
+  }
 
   // Broadcast cancellation
   const io = req.app.get('io');
@@ -276,7 +305,7 @@ const markFalseAlarm = asyncHandler(async (req, res) => {
     throw new ErrorResponse('SOS alert not found', 404);
   }
 
-  if (sosAlert.user.toString() !== req.user.id && req.user.role !== 'super_admin') {
+  if (!req.user || (sosAlert.user.toString() !== req.user.id && req.user.role !== 'super_admin')) {
     throw new ErrorResponse('Not authorized', 403);
   }
 

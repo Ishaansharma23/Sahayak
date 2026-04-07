@@ -47,6 +47,7 @@ export const ThemeProvider = ({ children }) => {
 
   const value = {
     isDarkMode,
+    theme: isDarkMode ? 'dark' : 'light',
     toggleTheme,
     setDarkMode,
     setLightMode,

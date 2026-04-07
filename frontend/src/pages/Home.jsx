@@ -62,7 +62,7 @@ const Home = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary via-red-500 to-secondary py-20 lg:py-32">
+      <section className="relative overflow-hidden bg-gradient-to-br from-black via-neutral-900 to-neutral-700 py-20 lg:py-32">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
@@ -77,7 +77,7 @@ const Home = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <span className="inline-flex items-center gap-2 bg-white/20 text-white px-4 py-2 rounded-full text-sm font-medium mb-6">
+              <span className="inline-flex items-center gap-2 bg-white/10 text-white px-4 py-2 rounded-full text-sm font-medium mb-6">
                 <HiHeart className="w-4 h-4" />
                 Your Safety, Our Priority
               </span>
@@ -85,7 +85,7 @@ const Home = () => {
               <h1 className="text-4xl lg:text-6xl font-bold text-white mb-6 leading-tight">
                 Real-Time Emergency
                 <br />
-                <span className="text-yellow-300">Hospital Network</span>
+                <span className="text-neutral-200">Hospital Network</span>
               </h1>
               
               <p className="text-xl text-white/90 mb-8 max-w-lg">
@@ -94,15 +94,14 @@ const Home = () => {
               </p>
 
               <div className="flex flex-wrap gap-4">
-                <Link to="/register">
+                <Link to="/emergency">
                   <Button size="lg" className="bg-white text-primary hover:bg-gray-100">
-                    Get Started Free
+                    Request Ambulance
                   </Button>
                 </Link>
-                <Link to="/emergency">
+                <Link to="/login">
                   <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-                    <HiPhone className="w-5 h-5" />
-                    Request Ambulance
+                    Staff Login
                   </Button>
                 </Link>
               </div>
@@ -132,10 +131,10 @@ const Home = () => {
                 <div className="bg-white/10 backdrop-blur-xl rounded-3xl p-8 border border-white/20">
                   <div className="grid grid-cols-2 gap-4">
                     {/* Hospital card */}
-                    <div className="bg-white rounded-xl p-4 shadow-xl">
+                    <div className="bg-white/90 rounded-xl p-4 shadow-xl">
                       <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <HiOfficeBuilding className="w-5 h-5 text-blue-600" />
+                        <div className="w-10 h-10 bg-black/10 rounded-lg flex items-center justify-center">
+                          <HiOfficeBuilding className="w-5 h-5 text-gray-900" />
                         </div>
                         <div>
                           <p className="font-semibold text-gray-900 text-sm">City Hospital</p>
@@ -143,7 +142,7 @@ const Home = () => {
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                        <span className="text-xs bg-black/10 text-gray-900 px-2 py-1 rounded-full">
                           15 beds available
                         </span>
                         <span className="text-xs text-gray-500">ICU: 3</span>
@@ -151,10 +150,10 @@ const Home = () => {
                     </div>
 
                     {/* Ambulance card */}
-                    <div className="bg-white rounded-xl p-4 shadow-xl">
+                    <div className="bg-white/90 rounded-xl p-4 shadow-xl">
                       <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                          <HiTruck className="w-5 h-5 text-red-600" />
+                        <div className="w-10 h-10 bg-black/10 rounded-lg flex items-center justify-center">
+                          <HiTruck className="w-5 h-5 text-gray-900" />
                         </div>
                         <div>
                           <p className="font-semibold text-gray-900 text-sm">Ambulance</p>
@@ -162,7 +161,7 @@ const Home = () => {
                         </div>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
+                        <span className="text-xs bg-black/10 text-gray-900 px-2 py-1 rounded-full">
                           ETA: 8 mins
                         </span>
                         <span className="text-xs text-gray-500">1.2 km</span>
@@ -170,7 +169,7 @@ const Home = () => {
                     </div>
 
                     {/* SOS Alert */}
-                    <div className="col-span-2 bg-gradient-to-r from-red-500 to-red-600 rounded-xl p-4 text-white">
+                    <div className="col-span-2 bg-gradient-to-r from-black to-neutral-800 rounded-xl p-4 text-white">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center animate-pulse">
@@ -193,9 +192,9 @@ const Home = () => {
                 <motion.div
                   animate={{ y: [0, -10, 0] }}
                   transition={{ duration: 3, repeat: Infinity }}
-                  className="absolute -top-4 -right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg"
+                  className="absolute -top-4 -right-4 bg-white/90 text-gray-900 px-4 py-2 rounded-lg shadow-lg"
                 >
-                  <span className="text-sm font-medium">🟢 Live Data</span>
+                  <span className="text-sm font-medium">● Live Data</span>
                 </motion.div>
               </div>
             </motion.div>

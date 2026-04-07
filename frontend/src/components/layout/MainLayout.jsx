@@ -65,14 +65,9 @@ const MainLayout = () => {
                   <Button size="sm">Dashboard</Button>
                 </Link>
               ) : (
-                <>
-                  <Link to="/login">
-                    <Button variant="ghost" size="sm">Login</Button>
-                  </Link>
-                  <Link to="/register">
-                    <Button size="sm">Get Started</Button>
-                  </Link>
-                </>
+                <Link to="/login">
+                  <Button variant="ghost" size="sm">Staff Login</Button>
+                </Link>
               )}
             </div>
           </div>

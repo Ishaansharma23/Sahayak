@@ -7,7 +7,7 @@ import {
   HiEye,
   HiBadgeCheck,
 } from 'react-icons/hi';
-import { adminAPI } from '../../services/api';
+import { adminAPI, doctorAPI } from '../../services/api';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
@@ -35,9 +35,12 @@ const ManageDoctors = () => {
         page: pagination.page,
         limit: pagination.limit,
         search: searchQuery,
-        verified: filter === 'verified' ? true : filter === 'pending' ? false : undefined,
+        verified: filter === 'verified' ? 'true' : undefined,
       };
-      const response = await adminAPI.getDoctors(params);
+
+      const response = filter === 'pending'
+        ? await adminAPI.getPendingDoctors({ page: pagination.page, limit: pagination.limit })
+        : await doctorAPI.getAll(params);
       if (response.data.success) {
         setDoctors(response.data.doctors || []);
         setPagination(prev => ({ ...prev, total: response.data.total || 0 }));
@@ -46,10 +49,10 @@ const ManageDoctors = () => {
       console.error('Error fetching doctors:', error);
       // Mock data
       setDoctors([
-        { _id: '1', user: { name: 'Dr. Priya Sharma', email: 'priya@example.com', avatar: '' }, specialization: 'Cardiologist', hospital: { name: 'City General Hospital' }, isVerified: true, experience: 12 },
-        { _id: '2', user: { name: 'Dr. Rajesh Kumar', email: 'rajesh@example.com', avatar: '' }, specialization: 'Neurologist', hospital: { name: 'Apollo Hospital' }, isVerified: true, experience: 8 },
-        { _id: '3', user: { name: 'Dr. Aisha Patel', email: 'aisha@example.com', avatar: '' }, specialization: 'Pediatrician', hospital: { name: 'New Care Hospital' }, isVerified: false, experience: 5 },
-        { _id: '4', user: { name: 'Dr. Vikram Singh', email: 'vikram@example.com', avatar: '' }, specialization: 'Orthopedic', hospital: { name: 'City General Hospital' }, isVerified: false, experience: 15 },
+        { _id: '1', user: { name: 'Dr. Priya Sharma', email: 'priya@example.com', avatar: '' }, specialization: 'Cardiologist', hospital: { name: 'City General Hospital' }, verified: true, experience: 12 },
+        { _id: '2', user: { name: 'Dr. Rajesh Kumar', email: 'rajesh@example.com', avatar: '' }, specialization: 'Neurologist', hospital: { name: 'Apollo Hospital' }, verified: true, experience: 8 },
+        { _id: '3', user: { name: 'Dr. Aisha Patel', email: 'aisha@example.com', avatar: '' }, specialization: 'Pediatrician', hospital: { name: 'New Care Hospital' }, verified: false, experience: 5 },
+        { _id: '4', user: { name: 'Dr. Vikram Singh', email: 'vikram@example.com', avatar: '' }, specialization: 'Orthopedic', hospital: { name: 'City General Hospital' }, verified: false, experience: 15 },
       ]);
     } finally {
       setLoading(false);
@@ -58,7 +61,9 @@ const ManageDoctors = () => {
 
   const handleVerify = async (doctorId, verified) => {
     try {
-      const response = await adminAPI.verifyDoctor(doctorId, { isVerified: verified });
+      const response = verified
+        ? await adminAPI.verifyDoctor(doctorId)
+        : await adminAPI.rejectDoctor(doctorId, { reason: 'Verification rejected' });
       if (response.data.success) {
         toast.success(verified ? 'Doctor verified' : 'Verification revoked');
         fetchDoctors();
@@ -133,7 +138,7 @@ const ManageDoctors = () => {
                   <div>
                     <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-1">
                       {doctor.user?.name}
-                      {doctor.isVerified && (
+                      {doctor.verified && (
                         <HiBadgeCheck className="w-4 h-4 text-blue-500" />
                       )}
                     </h3>
@@ -141,11 +146,11 @@ const ManageDoctors = () => {
                   </div>
                 </div>
                 <span className={`px-2 py-1 text-xs rounded-full ${
-                  doctor.isVerified
+                  doctor.verified
                     ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                     : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
                 }`}>
-                  {doctor.isVerified ? 'Verified' : 'Pending'}
+                  {doctor.verified ? 'Verified' : 'Pending'}
                 </span>
               </div>
 
@@ -177,7 +182,7 @@ const ManageDoctors = () => {
                 >
                   View
                 </Button>
-                {!doctor.isVerified ? (
+                {!doctor.verified ? (
                   <Button
                     variant="success"
                     size="sm"
@@ -220,7 +225,7 @@ const ManageDoctors = () => {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                   {selectedDoctor.user?.name}
-                  {selectedDoctor.isVerified && (
+                  {selectedDoctor.verified && (
                     <HiBadgeCheck className="w-5 h-5 text-blue-500" />
                   )}
                 </h3>
@@ -243,8 +248,8 @@ const ManageDoctors = () => {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Status</p>
-                <p className={`font-medium ${selectedDoctor.isVerified ? 'text-green-600' : 'text-yellow-600'}`}>
-                  {selectedDoctor.isVerified ? 'Verified' : 'Pending Verification'}
+                <p className={`font-medium ${selectedDoctor.verified ? 'text-green-600' : 'text-yellow-600'}`}>
+                  {selectedDoctor.verified ? 'Verified' : 'Pending Verification'}
                 </p>
               </div>
             </div>
@@ -253,7 +258,7 @@ const ManageDoctors = () => {
               <Button variant="secondary" onClick={() => setShowModal(false)}>
                 Close
               </Button>
-              {!selectedDoctor.isVerified && (
+              {!selectedDoctor.verified && (
                 <Button
                   variant="success"
                   icon={HiShieldCheck}

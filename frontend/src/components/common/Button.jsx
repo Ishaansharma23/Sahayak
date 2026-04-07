@@ -2,14 +2,14 @@ import { forwardRef } from 'react';
 import { motion } from 'framer-motion';
 
 const variants = {
-  primary: 'bg-primary hover:bg-primary-dark text-white shadow-lg shadow-primary/30',
-  secondary: 'bg-gray-200 hover:bg-gray-300 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white',
-  danger: 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/30',
-  success: 'bg-green-500 hover:bg-green-600 text-white shadow-lg shadow-green-500/30',
-  warning: 'bg-yellow-500 hover:bg-yellow-600 text-white shadow-lg shadow-yellow-500/30',
-  outline: 'border-2 border-primary text-primary hover:bg-primary hover:text-white',
-  ghost: 'text-primary hover:bg-primary/10',
-  sos: 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white shadow-xl shadow-red-500/40 animate-pulse',
+  primary: 'bg-gray-900 hover:bg-gray-800 text-white shadow-lg shadow-black/20',
+  secondary: 'bg-gray-200 hover:bg-gray-300 text-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-white',
+  danger: 'bg-gray-900 hover:bg-gray-800 text-white shadow-lg shadow-black/20',
+  success: 'bg-gray-900 hover:bg-gray-800 text-white shadow-lg shadow-black/20',
+  warning: 'bg-gray-800 hover:bg-gray-700 text-white shadow-lg shadow-black/20',
+  outline: 'border-2 border-gray-900 text-gray-900 hover:bg-gray-900 hover:text-white dark:border-gray-200 dark:text-gray-100 dark:hover:bg-gray-100 dark:hover:text-gray-900',
+  ghost: 'text-gray-800 hover:bg-gray-200 dark:text-gray-100 dark:hover:bg-gray-800',
+  sos: 'bg-gradient-to-r from-gray-900 to-gray-700 hover:from-black hover:to-gray-800 text-white shadow-xl shadow-black/30 animate-pulse',
 };
 
 const sizes = {

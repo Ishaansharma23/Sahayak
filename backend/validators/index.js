@@ -49,7 +49,7 @@ const registerSchema = Joi.object({
     .messages({ 'string.min': 'Password must be at least 6 characters' }),
   confirmPassword: Joi.string().valid(Joi.ref('password')).required()
     .messages({ 'any.only': 'Passwords do not match' }),
-  role: Joi.string().valid('user', 'hospital_admin', 'doctor').default('user'),
+  role: Joi.string().valid('hospital_admin', 'doctor').default('doctor'),
 });
 
 const loginSchema = Joi.object({
@@ -231,6 +231,8 @@ const sosAlertSchema = Joi.object({
     accuracy: Joi.number(),
   }).required(),
   description: Joi.string().max(1000),
+  contactName: Joi.string().max(100),
+  contactPhone: Joi.string().pattern(patterns.phone),
   batteryLevel: Joi.number().min(0).max(100),
   isCharging: Joi.boolean(),
 });

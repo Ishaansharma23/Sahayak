@@ -14,6 +14,7 @@ import {
 import { IoBed } from 'react-icons/io5';
 import { hospitalAPI, emergencyAPI } from '../../services/api';
 import { useSocket } from '../../context/SocketContext';
+import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Loading from '../../components/common/Loading';
@@ -23,6 +24,7 @@ const HospitalDashboard = () => {
   const [recentEmergencies, setRecentEmergencies] = useState([]);
   const [loading, setLoading] = useState(true);
   const { socket } = useSocket();
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchDashboardData();
@@ -43,9 +45,13 @@ const HospitalDashboard = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
+      if (!user?.hospital) {
+        throw new Error('Hospital profile is missing for this account');
+      }
+
       const [statsRes, emergenciesRes] = await Promise.all([
-        hospitalAPI.getDashboardStats(),
-        emergencyAPI.getActiveEmergencies(),
+        hospitalAPI.getStats(user.hospital),
+        emergencyAPI.getActiveEmergencies(user.hospital),
       ]);
 
       if (statsRes.data.success) {
@@ -60,8 +66,8 @@ const HospitalDashboard = () => {
       setStats({
         beds: { total: 200, available: 45, icu: { total: 20, available: 5 }, general: { total: 150, available: 35 }, emergency: { total: 30, available: 5 } },
         ambulances: { total: 10, available: 6 },
-        doctors: { total: 35, onDuty: 12 },
-        emergencies: { today: 8, pending: 3 },
+        doctorCount: 35,
+        emergencyStats: { requested: { count: 3 } },
       });
       setRecentEmergencies([
         { _id: '1', type: 'medical', patient: { name: 'John Doe' }, status: 'pending', createdAt: new Date().toISOString() },
@@ -90,17 +96,17 @@ const HospitalDashboard = () => {
       link: '/hospital-admin/ambulances',
     },
     {
-      title: 'Doctors On Duty',
-      value: stats?.doctors?.onDuty || 0,
-      subValue: `of ${stats?.doctors?.total || 0}`,
+      title: 'Active Doctors',
+      value: stats?.doctorCount || 0,
+      subValue: 'Registered',
       icon: HiUsers,
       color: 'purple',
       link: '/doctors',
     },
     {
       title: 'Pending Emergencies',
-      value: stats?.emergencies?.pending || 0,
-      subValue: `${stats?.emergencies?.today || 0} today`,
+      value: stats?.emergencyStats?.requested?.count || 0,
+      subValue: 'Awaiting response',
       icon: HiExclamationCircle,
       color: 'red',
       link: '/emergency',

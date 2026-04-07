@@ -1,23 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --primary: #3b82f6;
-  --primary-dark: #1d4ed8;
-  --secondary: #22c55e;
-  --danger: #ef4444;
-  --background: #ffffff;
-  --surface: #f8fafc;
-  --text: #1e293b;
-  --text-muted: #64748b;
+  --primary: #111111;
+  --primary-dark: #000000;
+  --secondary: #e5e5e5;
+  --danger: #111111;
+  --background: #f7f7f7;
+  --surface: #efefef;
+  --text: #0b0b0c;
+  --text-muted: #5c5c5c;
 }
 
 .dark {
-  --background: #0f172a;
-  --surface: #1e293b;
-  --text: #f8fafc;
-  --text-muted: #94a3b8;
+  --background: #0b0b0c;
+  --surface: #141414;
+  --text: #f7f7f7;
+  --text-muted: #a1a1a1;
 }
 
 * {
@@ -31,7 +33,7 @@ html {
 }
 
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
   background-color: var(--background);
   color: var(--text);
   min-height: 100vh;
@@ -56,19 +58,19 @@ body {
 
 /* Gradient backgrounds */
 .gradient-primary {
-  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #0b0b0c 0%, #3f3f3f 100%);
 }
 
 .gradient-danger {
-  background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+  background: linear-gradient(135deg, #0b0b0c 0%, #242424 100%);
 }
 
 .gradient-success {
-  background: linear-gradient(135deg, #22c55e 0%, #10b981 100%);
+  background: linear-gradient(135deg, #0b0b0c 0%, #3f3f3f 100%);
 }
 
 .gradient-medical {
-  background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 50%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #0b0b0c 0%, #2a2a2a 50%, #4a4a4a 100%);
 }
 
 /* SOS Button Animation */
@@ -79,11 +81,11 @@ body {
 @keyframes sos-pulse {
   0%, 100% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.6);
   }
   50% {
     transform: scale(1.05);
-    box-shadow: 0 0 30px 10px rgba(239, 68, 68, 0.4);
+    box-shadow: 0 0 30px 10px rgba(0, 0, 0, 0.3);
   }
 }
 

@@ -75,10 +75,10 @@ const Login = () => {
               <HiHeart className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Welcome Back
+              Staff Login
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Sign in to access your LifeLine account
+              Sign in to manage hospitals, doctors, and emergencies
             </p>
           </div>
 
@@ -161,9 +161,9 @@ const Login = () => {
 
           {/* Register Link */}
           <p className="text-center text-gray-600 dark:text-gray-400 mt-6">
-            Don't have an account?{' '}
+            Need staff access?{' '}
             <Link to="/register" className="text-primary font-medium hover:underline">
-              Sign up free
+              Register here
             </Link>
           </p>
         </motion.div>

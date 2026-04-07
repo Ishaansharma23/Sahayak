@@ -26,7 +26,7 @@ const Emergency = () => {
   const [nearbyHospitals, setNearbyHospitals] = useState([]);
   const [selectedHospital, setSelectedHospital] = useState(null);
   const [formData, setFormData] = useState({
-    type: 'medical',
+    type: 'ambulance',
     patientName: '',
     patientAge: '',
     patientCondition: '',
@@ -35,12 +35,12 @@ const Emergency = () => {
   });
 
   const emergencyTypes = [
-    { id: 'medical', label: 'Medical Emergency', icon: '🏥', color: 'bg-red-500' },
-    { id: 'accident', label: 'Accident', icon: '🚗', color: 'bg-orange-500' },
-    { id: 'cardiac', label: 'Cardiac Emergency', icon: '❤️', color: 'bg-pink-500' },
-    { id: 'trauma', label: 'Trauma', icon: '🩹', color: 'bg-purple-500' },
-    { id: 'pregnancy', label: 'Pregnancy Emergency', icon: '🤰', color: 'bg-blue-500' },
-    { id: 'other', label: 'Other', icon: '⚕️', color: 'bg-gray-500' },
+    { id: 'ambulance', label: 'Ambulance', icon: '🚑', color: 'bg-gray-900' },
+    { id: 'emergency_bed', label: 'Emergency Bed', icon: '🛏️', color: 'bg-gray-800' },
+    { id: 'doctor_visit', label: 'Doctor Visit', icon: '🩺', color: 'bg-gray-700' },
+    { id: 'blood', label: 'Blood', icon: '🩸', color: 'bg-gray-600' },
+    { id: 'oxygen', label: 'Oxygen', icon: '🫁', color: 'bg-gray-500' },
+    { id: 'other', label: 'Other', icon: '⚕️', color: 'bg-gray-400' },
   ];
 
   useEffect(() => {
@@ -76,7 +76,7 @@ const Emergency = () => {
       const response = await hospitalAPI.getNearby({
         lat: location.lat,
         lng: location.lng,
-        radius: 20,
+        maxDistance: 20,
         limit: 5,
       });
       if (response.data.success) {
@@ -109,18 +109,18 @@ const Emergency = () => {
     try {
       const emergencyData = {
         type: formData.type,
-        patient: {
+        patientInfo: {
           name: formData.patientName,
           age: formData.patientAge ? parseInt(formData.patientAge) : undefined,
           condition: formData.patientCondition,
+          phone: formData.contactPhone,
         },
-        location: {
+        pickupLocation: {
           type: 'Point',
           coordinates: [location.lng, location.lat],
         },
-        contactPhone: formData.contactPhone,
         notes: formData.notes,
-        hospital: selectedHospital?._id,
+        hospitalId: selectedHospital?._id,
       };
 
       // Emit via socket

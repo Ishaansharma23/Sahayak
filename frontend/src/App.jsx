@@ -81,6 +81,13 @@ function App() {
       {/* Public Routes */}
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
+        <Route path="/hospitals" element={<Hospitals />} />
+        <Route path="/hospitals/:id" element={<HospitalDetails />} />
+        <Route path="/doctors" element={<Doctors />} />
+        <Route path="/doctors/:id" element={<DoctorDetails />} />
+        <Route path="/emergency" element={<Emergency />} />
+        <Route path="/emergency/:id" element={<EmergencyTrack />} />
+        <Route path="/sos" element={<SOS />} />
         <Route
           path="/login"
           element={
@@ -108,13 +115,6 @@ function App() {
         }
       >
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/hospitals" element={<Hospitals />} />
-        <Route path="/hospitals/:id" element={<HospitalDetails />} />
-        <Route path="/doctors" element={<Doctors />} />
-        <Route path="/doctors/:id" element={<DoctorDetails />} />
-        <Route path="/emergency" element={<Emergency />} />
-        <Route path="/emergency/:id" element={<EmergencyTrack />} />
-        <Route path="/sos" element={<SOS />} />
         <Route path="/profile" element={<Profile />} />
       </Route>
 
