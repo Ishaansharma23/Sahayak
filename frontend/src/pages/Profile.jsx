@@ -127,7 +127,7 @@ const Profile = () => {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           {user?.name}
         </h1>
-        <p className="text-gray-500 capitalize">{user?.role?.replace('_', ' ')}</p>
+        <p className="text-gray-500 capitalize">{user?.accountType || 'client'}</p>
       </div>
 
       {/* Tabs */}

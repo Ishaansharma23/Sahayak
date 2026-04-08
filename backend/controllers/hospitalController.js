@@ -41,18 +41,29 @@ const getHospitals = asyncHandler(async (req, res) => {
       .populate('doctors', 'name specialization availabilityStatus')
       .sort(sort)
       .skip(skip)
-      .limit(limit),
+      .limit(limit)
+      .lean(),
     Hospital.countDocuments(queryObj),
   ]);
 
-  const result = paginationResponse(hospitals, total, { page, limit });
+  const normalizedHospitals = hospitals.map((hospital) => ({
+    ...hospital,
+    isVerified: hospital.verified,
+  }));
+
+  const result = paginationResponse(normalizedHospitals, total, { page, limit });
+  const payload = {
+    hospitals: result.data,
+    total: result.pagination.total,
+    pagination: result.pagination,
+  };
 
   // Cache for 2 minutes
-  await setCache(cacheKey, result, 120);
+  await setCache(cacheKey, payload, 120);
 
   res.status(200).json({
     success: true,
-    ...result,
+    ...payload,
   });
 });
 
@@ -78,7 +89,6 @@ const getNearbyHospitals = asyncHandler(async (req, res) => {
         distanceField: 'distance',
         maxDistance: parseFloat(maxDistance) * 1000, // km to meters
         query: {
-          verified: true,
           isActive: true,
           'beds.available': { $gte: parseInt(minBeds) },
         },
@@ -101,10 +111,15 @@ const getNearbyHospitals = asyncHandler(async (req, res) => {
     { $limit: 20 },
   ]);
 
+  const normalizedHospitals = hospitals.map((hospital) => ({
+    ...hospital,
+    isVerified: hospital.verified ?? true,
+  }));
+
   res.status(200).json({
     success: true,
-    count: hospitals.length,
-    hospitals,
+    count: normalizedHospitals.length,
+    hospitals: normalizedHospitals,
   });
 });
 
@@ -116,7 +131,8 @@ const getNearbyHospitals = asyncHandler(async (req, res) => {
 const getHospital = asyncHandler(async (req, res) => {
   const hospital = await Hospital.findById(req.params.id)
     .populate('doctors', 'name specialization availabilityStatus consultation rating')
-    .populate('admin', 'name email');
+    .populate('admin', 'name email')
+    .lean();
 
   if (!hospital) {
     throw new ErrorResponse('Hospital not found', 404);
@@ -124,7 +140,12 @@ const getHospital = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    hospital,
+    hospital: hospital
+      ? {
+          ...hospital,
+          isVerified: hospital.verified,
+        }
+      : hospital,
   });
 });
 
@@ -134,15 +155,16 @@ const getHospital = asyncHandler(async (req, res) => {
  * @access  Private (Hospital Admin, Super Admin)
  */
 const createHospital = asyncHandler(async (req, res) => {
-  // Set admin to current user if hospital_admin
-  if (req.user.role === 'hospital_admin') {
+  // Set admin to current user if hospital account
+  if (req.user.accountType === 'hospital') {
     req.body.admin = req.user.id;
   }
 
   const hospital = await Hospital.create(req.body);
 
   // Link hospital to admin user
-  if (req.user.role === 'hospital_admin') {
+  if (req.user.accountType === 'hospital') {
+    req.user.hospitalProfile = hospital._id;
     req.user.hospital = hospital._id;
     await req.user.save();
   }
@@ -151,7 +173,7 @@ const createHospital = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'hospital_create',
     category: 'hospital',
     resource: { type: 'Hospital', id: hospital._id, name: hospital.name },
@@ -182,13 +204,13 @@ const updateHospital = asyncHandler(async (req, res) => {
   }
 
   // Check authorization
-  if (req.user.role === 'hospital_admin' && 
+  if (req.user.accountType === 'hospital' && 
       hospital.admin.toString() !== req.user.id) {
     throw new ErrorResponse('Not authorized to update this hospital', 403);
   }
 
   // Prevent changing admin and verification status (super admin only)
-  if (req.user.role !== 'super_admin') {
+  if (req.user.accountType !== 'admin') {
     delete req.body.admin;
     delete req.body.verified;
     delete req.body.status;
@@ -203,7 +225,7 @@ const updateHospital = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'hospital_update',
     category: 'hospital',
     resource: { type: 'Hospital', id: hospital._id, name: hospital.name },
@@ -236,7 +258,7 @@ const updateBedAvailability = asyncHandler(async (req, res) => {
   }
 
   // Check authorization
-  if (req.user.role === 'hospital_admin' && 
+  if (req.user.accountType === 'hospital' && 
       hospital.admin.toString() !== req.user.id) {
     throw new ErrorResponse('Not authorized', 403);
   }
@@ -246,7 +268,7 @@ const updateBedAvailability = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'bed_update',
     category: 'hospital',
     resource: { type: 'Hospital', id: hospital._id, name: hospital.name },
@@ -291,7 +313,7 @@ const updateAmbulanceAvailability = asyncHandler(async (req, res) => {
   }
 
   // Check authorization
-  if (req.user.role === 'hospital_admin' && 
+  if (req.user.accountType === 'hospital' && 
       hospital.admin.toString() !== req.user.id) {
     throw new ErrorResponse('Not authorized', 403);
   }
@@ -352,7 +374,10 @@ const getHospitalStats = asyncHandler(async (req, res) => {
   ]);
 
   const stats = {
-    beds: hospital.beds,
+    beds: {
+      ...hospital.beds,
+      surgical: hospital.beds.surgical || { total: 0, available: 0 },
+    },
     ambulances: hospital.ambulances,
     doctorCount,
     emergencyStats: emergencyStats.reduce((acc, curr) => {
@@ -386,7 +411,7 @@ const deleteHospital = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'hospital_delete',
     category: 'hospital',
     resource: { type: 'Hospital', id: hospital._id, name: hospital.name },

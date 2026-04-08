@@ -27,7 +27,7 @@ const ManageUsers = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
 
-  const roles = ['user', 'hospital_admin', 'doctor', 'super_admin'];
+  const roles = ['client', 'doctor', 'hospital', 'admin'];
 
   useEffect(() => {
     fetchUsers();
@@ -40,7 +40,7 @@ const ManageUsers = () => {
         page: pagination.page,
         limit: pagination.limit,
         search: searchQuery,
-        role: selectedRole,
+        accountType: selectedRole,
       };
       const response = await adminAPI.getUsers(params);
       if (response.data.success) {
@@ -51,9 +51,9 @@ const ManageUsers = () => {
       console.error('Error fetching users:', error);
       // Mock data for demo
       setUsers([
-        { _id: '1', name: 'John Doe', email: 'john@example.com', phone: '9876543210', role: 'user', isActive: true },
-        { _id: '2', name: 'Jane Smith', email: 'jane@example.com', phone: '9876543211', role: 'hospital_admin', isActive: true },
-        { _id: '3', name: 'Dr. Wilson', email: 'wilson@example.com', phone: '9876543212', role: 'doctor', isActive: true },
+        { _id: '1', name: 'John Doe', email: 'john@example.com', phone: '9876543210', accountType: 'client', isActive: true },
+        { _id: '2', name: 'Jane Smith', email: 'jane@example.com', phone: '9876543211', accountType: 'hospital', isActive: true },
+        { _id: '3', name: 'Dr. Wilson', email: 'wilson@example.com', phone: '9876543212', accountType: 'doctor', isActive: true },
       ]);
     } finally {
       setLoading(false);
@@ -66,16 +66,16 @@ const ManageUsers = () => {
     fetchUsers();
   };
 
-  const handleUpdateUserRole = async (userId, role) => {
+  const handleUpdateUserRole = async (userId, accountType) => {
     try {
-      const response = await adminAPI.updateUserRole(userId, { role });
+      const response = await adminAPI.updateUserRole(userId, { accountType });
       if (response.data.success) {
-        toast.success('User role updated');
+        toast.success('User account type updated');
         fetchUsers();
         setShowEditModal(false);
       }
     } catch (error) {
-      toast.error('Failed to update role');
+      toast.error('Failed to update account type');
       console.error('Update error:', error);
     }
   };
@@ -97,12 +97,12 @@ const ManageUsers = () => {
 
   const getRoleColor = (role) => {
     const colors = {
-      user: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-      hospital_admin: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+      client: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+      hospital: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
       doctor: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-      super_admin: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+      admin: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
     };
-    return colors[role] || colors.user;
+    return colors[role] || colors.client;
   };
 
   return (
@@ -211,8 +211,8 @@ const ManageUsers = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRoleColor(user.role)}`}>
-                        {user.role?.replace('_', ' ').toUpperCase()}
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getRoleColor(user.accountType)}`}>
+                        {user.accountType?.replace('_', ' ').toUpperCase()}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -315,8 +315,8 @@ const ManageUsers = () => {
                 Role
               </label>
               <select
-                value={selectedUser.role}
-                onChange={(e) => setSelectedUser(prev => ({ ...prev, role: e.target.value }))}
+                value={selectedUser.accountType}
+                onChange={(e) => setSelectedUser(prev => ({ ...prev, accountType: e.target.value }))}
                 className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               >
                 {roles.map((role) => (
@@ -330,7 +330,7 @@ const ManageUsers = () => {
               <Button variant="secondary" onClick={() => setShowEditModal(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => handleUpdateUserRole(selectedUser._id, selectedUser.role)}>
+              <Button onClick={() => handleUpdateUserRole(selectedUser._id, selectedUser.accountType)}>
                 Save Changes
               </Button>
             </div>

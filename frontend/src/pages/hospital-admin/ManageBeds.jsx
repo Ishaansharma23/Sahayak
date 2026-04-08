@@ -10,6 +10,7 @@ import {
 import { IoBed } from 'react-icons/io5';
 import { hospitalAPI } from '../../services/api';
 import { useSocket } from '../../context/SocketContext';
+import { useAuth } from '../../context/AuthContext';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Loading from '../../components/common/Loading';
@@ -20,10 +21,12 @@ const ManageBeds = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const { socket } = useSocket();
+  const { user } = useAuth();
 
   const bedTypes = [
     { key: 'general', label: 'General Ward', color: 'blue', icon: '🛏️' },
     { key: 'icu', label: 'ICU', color: 'red', icon: '🏥' },
+    { key: 'ventilators', label: 'Ventilators', color: 'orange', icon: '🫁' },
     { key: 'emergency', label: 'Emergency', color: 'orange', icon: '🚨' },
     { key: 'pediatric', label: 'Pediatric', color: 'green', icon: '👶' },
     { key: 'maternity', label: 'Maternity', color: 'pink', icon: '🤱' },
@@ -37,21 +40,30 @@ const ManageBeds = () => {
   const fetchBedData = async () => {
     setLoading(true);
     try {
-      const response = await hospitalAPI.getBedAvailability();
+      const hospitalId = user?.hospitalProfile?._id || user?.hospitalProfile || user?.hospital;
+      if (!hospitalId) {
+        throw new Error('Hospital profile is missing for this account');
+      }
+
+      const response = await hospitalAPI.getStats(hospitalId);
       if (response.data.success) {
-        setBedData(response.data.beds);
+        const beds = response.data.stats?.beds || {};
+        const normalized = bedTypes.reduce((acc, type) => {
+          const entry = beds[type.key] || { total: 0, available: 0 };
+          const available = entry.available || 0;
+          const total = entry.total || 0;
+          acc[type.key] = {
+            total,
+            available,
+            occupied: Math.max(0, total - available),
+          };
+          return acc;
+        }, {});
+        setBedData(normalized);
       }
     } catch (error) {
       console.error('Error fetching bed data:', error);
-      // Mock data
-      setBedData({
-        general: { total: 100, available: 35, occupied: 65 },
-        icu: { total: 20, available: 5, occupied: 15 },
-        emergency: { total: 30, available: 8, occupied: 22 },
-        pediatric: { total: 25, available: 12, occupied: 13 },
-        maternity: { total: 15, available: 6, occupied: 9 },
-        surgical: { total: 10, available: 3, occupied: 7 },
-      });
+      setBedData({});
     } finally {
       setLoading(false);
     }
@@ -79,8 +91,13 @@ const ManageBeds = () => {
 
     setUpdating(true);
     try {
-      const response = await hospitalAPI.updateBedAvailability({
-        type,
+      const hospitalId = user?.hospitalProfile?._id || user?.hospitalProfile || user?.hospital;
+      if (!hospitalId) {
+        throw new Error('Hospital profile is missing for this account');
+      }
+
+      const response = await hospitalAPI.updateBeds(hospitalId, {
+        bedType: type,
         available: newAvailable,
       });
 
@@ -96,7 +113,12 @@ const ManageBeds = () => {
 
         // Emit socket event for real-time updates
         if (socket) {
-          socket.emit('bed_update', { type, available: newAvailable });
+          socket.emit('updateBeds', {
+            hospitalId,
+            hospitalName: user?.hospitalProfile?.name || user?.hospital?.name || 'Hospital',
+            bedType: type,
+            available: newAvailable,
+          });
         }
 
         toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} beds updated`);

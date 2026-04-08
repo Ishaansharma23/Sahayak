@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { normalizeAccountType } from '../utils/helpers';
 
 const AuthContext = createContext(null);
 
@@ -17,12 +18,20 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  const normalizeUser = (payload) => {
+    if (!payload) return payload;
+    return {
+      ...payload,
+      accountType: normalizeAccountType(payload.accountType || payload.role),
+    };
+  };
+
   // Check if user is logged in on mount
   const checkAuth = useCallback(async () => {
     try {
       const response = await api.get('/auth/me');
       if (response.data.success) {
-        setUser(response.data.user);
+        setUser(normalizeUser(response.data.user));
         setIsAuthenticated(true);
       }
     } catch (error) {
@@ -42,10 +51,11 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await api.post('/auth/register', userData);
       if (response.data.success) {
-        setUser(response.data.user);
+        const normalized = normalizeUser(response.data.user);
+        setUser(normalized);
         setIsAuthenticated(true);
         toast.success('Registration successful!');
-        return { success: true };
+        return { success: true, user: normalized };
       }
     } catch (error) {
       const message = error.response?.data?.message || 'Registration failed';
@@ -59,10 +69,11 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await api.post('/auth/login', credentials);
       if (response.data.success) {
-        setUser(response.data.user);
+        const normalized = normalizeUser(response.data.user);
+        setUser(normalized);
         setIsAuthenticated(true);
         toast.success('Login successful!');
-        return { success: true, user: response.data.user };
+        return { success: true, user: normalized };
       }
     } catch (error) {
       const message = error.response?.data?.message || 'Login failed';
@@ -81,6 +92,23 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setIsAuthenticated(false);
       toast.success('Logged out successfully');
+    }
+  };
+
+  // Complete onboarding
+  const completeOnboarding = async (payload) => {
+    try {
+      const response = await api.put('/auth/onboarding', payload);
+      if (response.data.success) {
+        const normalized = normalizeUser(response.data.user);
+        setUser(normalized);
+        toast.success('Onboarding completed');
+        return { success: true, user: normalized };
+      }
+    } catch (error) {
+      const message = error.response?.data?.message || 'Onboarding failed';
+      toast.error(message);
+      return { success: false, message };
     }
   };
 
@@ -127,8 +155,9 @@ export const AuthProvider = ({ children }) => {
   // Check if user has specific role
   const hasRole = (roles) => {
     if (!user) return false;
-    if (typeof roles === 'string') return user.role === roles;
-    return roles.includes(user.role);
+    const accountType = user.accountType || user.role;
+    if (typeof roles === 'string') return accountType === roles;
+    return roles.includes(accountType);
   };
 
   const value = {
@@ -141,6 +170,7 @@ export const AuthProvider = ({ children }) => {
     updateProfile,
     changePassword,
     updateLocation,
+    completeOnboarding,
     hasRole,
     checkAuth,
   };

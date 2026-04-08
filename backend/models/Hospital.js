@@ -96,6 +96,10 @@ const hospitalSchema = new mongoose.Schema({
       total: { type: Number, default: 0 },
       available: { type: Number, default: 0 },
     },
+    surgical: {
+      total: { type: Number, default: 0 },
+      available: { type: Number, default: 0 },
+    },
   },
   // Operating Hours
   operatingHours: {
@@ -143,10 +147,10 @@ const hospitalSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
   },
-  // Verification & Status
+  // Verification & Status (kept but defaulted to true for simplified flow)
   verified: {
     type: Boolean,
-    default: false,
+    default: true,
   },
   verifiedAt: Date,
   verifiedBy: {
@@ -160,7 +164,7 @@ const hospitalSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected', 'suspended'],
-    default: 'pending',
+    default: 'approved',
   },
   rejectionReason: String,
   // Documents
@@ -170,6 +174,7 @@ const hospitalSchema = new mongoose.Schema({
     verified: { type: Boolean, default: false },
     uploadedAt: { type: Date, default: Date.now },
   }],
+  certificateUrl: String,
   // Images
   images: [{
     url: String,
@@ -245,7 +250,6 @@ hospitalSchema.statics.findNearby = function(lat, lng, maxDistanceKm = 50) {
         $maxDistance: maxDistanceKm * 1000, // Convert to meters
       },
     },
-    verified: true,
     isActive: true,
   });
 };
@@ -254,7 +258,7 @@ hospitalSchema.statics.findNearby = function(lat, lng, maxDistanceKm = 50) {
  * Update bed availability
  */
 hospitalSchema.methods.updateBedAvailability = async function(bedType, available) {
-  const validTypes = ['available', 'icu', 'ventilators', 'emergency', 'general', 'pediatric', 'maternity'];
+  const validTypes = ['available', 'icu', 'ventilators', 'emergency', 'general', 'pediatric', 'maternity', 'surgical'];
   
   if (!validTypes.includes(bedType)) {
     throw new Error('Invalid bed type');
@@ -263,6 +267,9 @@ hospitalSchema.methods.updateBedAvailability = async function(bedType, available
   if (bedType === 'available') {
     this.beds.available = available;
   } else {
+    if (!this.beds[bedType]) {
+      this.beds[bedType] = { total: 0, available: 0 };
+    }
     this.beds[bedType].available = available;
   }
   

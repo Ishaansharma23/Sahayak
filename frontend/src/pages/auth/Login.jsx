@@ -1,8 +1,10 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { HiMail, HiLockClosed, HiHeart } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
+import { getDashboardPath, normalizeAccountType } from '../../utils/helpers';
+import AccountTypeCards from '../../components/auth/AccountTypeCards';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 
@@ -11,10 +13,19 @@ const Login = () => {
     email: '',
     password: '',
   });
+  const [accountType, setAccountType] = useState('client');
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const type = normalizeAccountType(searchParams.get('type'));
+    if (type) {
+      setAccountType(type);
+    }
+  }, [searchParams]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -43,21 +54,16 @@ const Login = () => {
     if (!validate()) return;
 
     setLoading(true);
-    const result = await login(formData);
+    const result = await login({ ...formData, accountType });
     setLoading(false);
 
     if (result.success) {
-      // Redirect based on role
       const user = result.user;
-      if (user.role === 'super_admin') {
-        navigate('/admin');
-      } else if (user.role === 'hospital_admin') {
-        navigate('/hospital-admin');
-      } else if (user.role === 'doctor') {
-        navigate('/doctor');
-      } else {
-        navigate('/dashboard');
+      if (!user?.isOnboarded) {
+        navigate('/onboarding', { replace: true });
+        return;
       }
+      navigate(getDashboardPath(user?.accountType), { replace: true });
     }
   };
 
@@ -75,11 +81,15 @@ const Login = () => {
               <HiHeart className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Staff Login
+              Login to LifeLine
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Sign in to manage hospitals, doctors, and emergencies
+              Choose your account type to continue
             </p>
+          </div>
+
+          <div className="mb-6">
+            <AccountTypeCards value={accountType} onChange={setAccountType} intent="login" />
           </div>
 
           {/* Form */}
@@ -124,7 +134,7 @@ const Login = () => {
               loading={loading}
               size="lg"
             >
-              Sign In
+              Login
             </Button>
           </form>
 
@@ -161,7 +171,7 @@ const Login = () => {
 
           {/* Register Link */}
           <p className="text-center text-gray-600 dark:text-gray-400 mt-6">
-            Need staff access?{' '}
+            Need an account?{' '}
             <Link to="/register" className="text-primary font-medium hover:underline">
               Register here
             </Link>

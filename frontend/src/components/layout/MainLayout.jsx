@@ -66,7 +66,7 @@ const MainLayout = () => {
                 </Link>
               ) : (
                 <Link to="/login">
-                  <Button variant="ghost" size="sm">Staff Login</Button>
+                  <Button variant="ghost" size="sm">Login / Register</Button>
                 </Link>
               )}
             </div>

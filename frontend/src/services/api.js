@@ -38,6 +38,7 @@ export const authAPI = {
   updateProfile: (data) => api.put('/auth/profile', data),
   changePassword: (data) => api.put('/auth/password', data),
   updateLocation: (data) => api.put('/auth/location', data),
+  onboarding: (data) => api.put('/auth/onboarding', data),
 };
 
 // Hospital API

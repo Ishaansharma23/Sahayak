@@ -34,13 +34,28 @@ const getDoctors = asyncHandler(async (req, res) => {
       .populate('user', 'email phone')
       .sort(sort)
       .skip(skip)
-      .limit(limit),
+      .limit(limit)
+      .lean(),
     Doctor.countDocuments(queryObj),
   ]);
 
+  const normalizedDoctors = doctors.map((doctor) => ({
+    ...doctor,
+    isVerified: doctor.verified,
+    specialty: doctor.specialization,
+    experience: doctor.experience?.years,
+    qualification: doctor.qualifications?.[0]?.degree,
+    consultationFee: doctor.consultation?.fee,
+    isAvailable: doctor.availabilityStatus === 'available',
+  }));
+
+  const result = paginationResponse(normalizedDoctors, total, { page, limit });
+
   res.status(200).json({
     success: true,
-    ...paginationResponse(doctors, total, { page, limit }),
+    doctors: result.data,
+    total: result.pagination.total,
+    pagination: result.pagination,
   });
 });
 
@@ -70,7 +85,8 @@ const getAvailableDoctors = asyncHandler(async (req, res) => {
 const getDoctor = asyncHandler(async (req, res) => {
   const doctor = await Doctor.findById(req.params.id)
     .populate('hospital', 'name address contact')
-    .populate('user', 'email phone');
+    .populate('user', 'email phone')
+    .lean();
 
   if (!doctor) {
     throw new ErrorResponse('Doctor not found', 404);
@@ -78,7 +94,19 @@ const getDoctor = asyncHandler(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    doctor,
+    doctor: doctor
+      ? {
+          ...doctor,
+          isVerified: doctor.verified,
+          specialty: doctor.specialization,
+          experience: doctor.experience?.years,
+          qualification: doctor.qualifications?.[0]?.degree,
+          consultationFee: doctor.consultation?.fee,
+          isAvailable: doctor.availabilityStatus === 'available',
+          phone: doctor.contact?.phone,
+          email: doctor.contact?.email,
+        }
+      : doctor,
   });
 });
 
@@ -89,7 +117,7 @@ const getDoctor = asyncHandler(async (req, res) => {
  */
 const createDoctor = asyncHandler(async (req, res) => {
   // If doctor is creating their own profile
-  if (req.user.role === 'doctor') {
+  if (req.user.accountType === 'doctor') {
     const existingProfile = await Doctor.findOne({ user: req.user.id });
     if (existingProfile) {
       throw new ErrorResponse('Doctor profile already exists', 400);
@@ -98,8 +126,8 @@ const createDoctor = asyncHandler(async (req, res) => {
   }
 
   // If hospital admin is creating
-  if (req.user.role === 'hospital_admin') {
-    req.body.hospital = req.user.hospital;
+  if (req.user.accountType === 'hospital') {
+    req.body.hospital = req.user.hospitalProfile || req.user.hospital;
   }
 
   const doctor = await Doctor.create(req.body);
@@ -108,7 +136,7 @@ const createDoctor = asyncHandler(async (req, res) => {
   if (req.body.user) {
     await User.findByIdAndUpdate(req.body.user, {
       doctorProfile: doctor._id,
-      role: 'doctor',
+      accountType: 'doctor',
     });
   }
 
@@ -122,7 +150,7 @@ const createDoctor = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'doctor_create',
     category: 'doctor',
     resource: { type: 'Doctor', id: doctor._id, name: doctor.name },
@@ -150,12 +178,12 @@ const updateDoctor = asyncHandler(async (req, res) => {
   }
 
   // Check authorization
-  if (req.user.role === 'doctor' && doctor.user.toString() !== req.user.id) {
+  if (req.user.accountType === 'doctor' && doctor.user.toString() !== req.user.id) {
     throw new ErrorResponse('Not authorized', 403);
   }
 
   // Prevent changing certain fields
-  if (req.user.role !== 'super_admin') {
+  if (req.user.accountType !== 'admin') {
     delete req.body.verified;
     delete req.body.status;
     delete req.body.user;
@@ -170,7 +198,7 @@ const updateDoctor = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'doctor_update',
     category: 'doctor',
     resource: { type: 'Doctor', id: doctor._id, name: doctor.name },
@@ -201,7 +229,7 @@ const updateAvailability = asyncHandler(async (req, res) => {
   }
 
   // Check authorization
-  if (req.user.role === 'doctor' && doctor.user.toString() !== req.user.id) {
+  if (req.user.accountType === 'doctor' && doctor.user.toString() !== req.user.id) {
     throw new ErrorResponse('Not authorized', 403);
   }
 
@@ -210,7 +238,7 @@ const updateAvailability = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'availability_change',
     category: 'doctor',
     resource: { type: 'Doctor', id: doctor._id, name: doctor.name },
@@ -250,7 +278,7 @@ const toggleEmergencyAvailability = asyncHandler(async (req, res) => {
   }
 
   // Check authorization
-  if (req.user.role === 'doctor' && doctor.user.toString() !== req.user.id) {
+  if (req.user.accountType === 'doctor' && doctor.user.toString() !== req.user.id) {
     throw new ErrorResponse('Not authorized', 403);
   }
 
@@ -308,7 +336,7 @@ const updateSchedule = asyncHandler(async (req, res) => {
   }
 
   // Check authorization
-  if (req.user.role === 'doctor' && doctor.user.toString() !== req.user.id) {
+  if (req.user.accountType === 'doctor' && doctor.user.toString() !== req.user.id) {
     throw new ErrorResponse('Not authorized', 403);
   }
 
@@ -346,7 +374,7 @@ const deleteDoctor = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'doctor_delete',
     category: 'doctor',
     resource: { type: 'Doctor', id: doctor._id, name: doctor.name },

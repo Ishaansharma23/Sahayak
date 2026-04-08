@@ -40,14 +40,15 @@ const initSocketIO = (io) => {
       console.log(`User ${socket.user.email} joined their room`);
 
       // Join role-specific rooms
-      if (socket.user.role === 'super_admin') {
+      if (socket.user.accountType === 'admin') {
         socket.join('admin');
         console.log(`Admin ${socket.user.email} joined admin room`);
       }
 
-      if (socket.user.role === 'hospital_admin' && socket.user.hospital) {
-        socket.join(`hospital:${socket.user.hospital}`);
-        console.log(`Hospital admin joined hospital room: ${socket.user.hospital}`);
+      const hospitalId = socket.user.hospitalProfile || socket.user.hospital;
+      if (socket.user.accountType === 'hospital' && hospitalId) {
+        socket.join(`hospital:${hospitalId}`);
+        console.log(`Hospital admin joined hospital room: ${hospitalId}`);
       }
     }
 

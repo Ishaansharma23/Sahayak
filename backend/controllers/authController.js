@@ -2,6 +2,7 @@ const { User, AuditLog } = require('../models');
 const { asyncHandler, ErrorResponse } = require('../middleware/errorHandler');
 const crypto = require('crypto');
 const { sendEmail } = require('../utils/email');
+const { completeOnboarding, normalizeAccountType } = require('../services/onboardingService');
 
 /**
  * Cookie options for JWT token
@@ -39,7 +40,7 @@ const sendTokenResponse = (user, statusCode, res, message = 'Success') => {
  * @access  Public
  */
 const register = asyncHandler(async (req, res) => {
-  const { name, email, phone, password, role } = req.body;
+  const { name, email, phone, password, accountType } = req.body;
 
   // Check if user exists
   const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
@@ -53,14 +54,14 @@ const register = asyncHandler(async (req, res) => {
     email,
     phone,
     password,
-    role: role || 'doctor',
+    accountType: normalizeAccountType(accountType) || 'client',
   });
 
   // Log registration
   await AuditLog.log({
     user: user._id,
     userEmail: user.email,
-    userRole: user.role,
+    userRole: user.accountType,
     action: 'register',
     category: 'auth',
     resource: { type: 'User', id: user._id, name: user.name },
@@ -78,13 +79,18 @@ const register = asyncHandler(async (req, res) => {
  * @access  Public
  */
 const login = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, accountType } = req.body;
 
   // Find user with password
   const user = await User.findOne({ email }).select('+password');
 
   if (!user) {
     throw new ErrorResponse('Invalid credentials', 401);
+  }
+
+  if (!user.accountType && user.role) {
+    user.accountType = normalizeAccountType(user.role);
+    await user.save();
   }
 
   // Check if account is locked
@@ -117,6 +123,11 @@ const login = asyncHandler(async (req, res) => {
     throw new ErrorResponse('Account has been deactivated', 401);
   }
 
+  const normalizedAccountType = normalizeAccountType(accountType);
+  if (normalizedAccountType && user.accountType !== normalizedAccountType) {
+    throw new ErrorResponse('Account type does not match this login', 401);
+  }
+
   // Reset login attempts
   await user.resetLoginAttempts();
 
@@ -124,7 +135,7 @@ const login = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: user._id,
     userEmail: user.email,
-    userRole: user.role,
+    userRole: user.accountType,
     action: 'login',
     category: 'auth',
     ipAddress: req.ip,
@@ -145,7 +156,7 @@ const logout = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'logout',
     category: 'auth',
     ipAddress: req.ip,
@@ -171,7 +182,7 @@ const logout = asyncHandler(async (req, res) => {
  */
 const getMe = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user.id)
-    .populate('hospital', 'name address')
+    .populate('hospitalProfile', 'name address certificateUrl')
     .populate('doctorProfile');
 
   res.status(200).json({
@@ -204,7 +215,7 @@ const updateProfile = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'other',
     category: 'auth',
     resource: { type: 'User', id: req.user._id, name: user.name },
@@ -243,7 +254,7 @@ const changePassword = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'password_change',
     category: 'auth',
     ipAddress: req.ip,
@@ -395,6 +406,23 @@ const updateLocation = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * @desc    Complete onboarding and create profiles
+ * @route   PUT /api/auth/onboarding
+ * @access  Private
+ */
+const onboarding = asyncHandler(async (req, res) => {
+  const result = await completeOnboarding(req.user.id, req.body);
+
+  res.status(200).json({
+    success: true,
+    message: 'Onboarding completed',
+    user: result.user,
+    doctorProfile: result.doctorProfile,
+    hospitalProfile: result.hospitalProfile,
+  });
+});
+
 module.exports = {
   register,
   login,
@@ -405,4 +433,5 @@ module.exports = {
   forgotPassword,
   resetPassword,
   updateLocation,
+  onboarding,
 };

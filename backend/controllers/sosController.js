@@ -20,8 +20,7 @@ const getOrCreateGuestUser = async (name, phone) => {
     email: defaultEmail,
     phone: defaultPhone,
     password,
-    role: 'user',
-    isVerified: true,
+    accountType: 'client',
     isActive: true,
   });
 };
@@ -101,7 +100,7 @@ const triggerSOS = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: requester._id,
     userEmail: requester.email,
-    userRole: requester.role,
+    userRole: requester.accountType,
     action: 'sos_trigger',
     category: 'sos',
     resource: { type: 'SOSAlert', id: sosAlert._id, name: sosAlert.alertId },
@@ -235,7 +234,7 @@ const getSOSAlert = asyncHandler(async (req, res) => {
   // Check authorization
   if (req.user) {
     const isOwner = sosAlert.user._id.toString() === req.user.id;
-    const isAdmin = ['super_admin', 'hospital_admin'].includes(req.user.role);
+    const isAdmin = ['admin', 'hospital'].includes(req.user.accountType);
 
     if (!isOwner && !isAdmin) {
       throw new ErrorResponse('Not authorized', 403);
@@ -260,7 +259,7 @@ const cancelSOS = asyncHandler(async (req, res) => {
     throw new ErrorResponse('SOS alert not found', 404);
   }
 
-  if (req.user && sosAlert.user.toString() !== req.user.id && req.user.role !== 'super_admin') {
+  if (req.user && sosAlert.user.toString() !== req.user.id && req.user.accountType !== 'admin') {
     throw new ErrorResponse('Not authorized', 403);
   }
 
@@ -270,7 +269,7 @@ const cancelSOS = asyncHandler(async (req, res) => {
     await AuditLog.log({
       user: req.user._id,
       userEmail: req.user.email,
-      userRole: req.user.role,
+      userRole: req.user.accountType,
       action: 'sos_cancel',
       category: 'sos',
       resource: { type: 'SOSAlert', id: sosAlert._id, name: sosAlert.alertId },
@@ -305,7 +304,7 @@ const markFalseAlarm = asyncHandler(async (req, res) => {
     throw new ErrorResponse('SOS alert not found', 404);
   }
 
-  if (!req.user || (sosAlert.user.toString() !== req.user.id && req.user.role !== 'super_admin')) {
+  if (!req.user || (sosAlert.user.toString() !== req.user.id && req.user.accountType !== 'admin')) {
     throw new ErrorResponse('Not authorized', 403);
   }
 
@@ -314,7 +313,7 @@ const markFalseAlarm = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'sos_false_alarm',
     category: 'sos',
     resource: { type: 'SOSAlert', id: sosAlert._id, name: sosAlert.alertId },
@@ -343,9 +342,10 @@ const acknowledgeSOS = asyncHandler(async (req, res) => {
   await sosAlert.updateStatus('acknowledged', req.user.id, 'Acknowledged by responder');
 
   // Update hospital acknowledgment
-  if (req.user.hospital) {
+  const hospitalId = req.user.hospitalProfile || req.user.hospital;
+  if (hospitalId) {
     const hospitalIndex = sosAlert.alertedHospitals.findIndex(
-      h => h.hospital.toString() === req.user.hospital.toString()
+      h => h.hospital.toString() === hospitalId.toString()
     );
     if (hospitalIndex !== -1) {
       sosAlert.alertedHospitals[hospitalIndex].acknowledged = true;
@@ -358,7 +358,7 @@ const acknowledgeSOS = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'sos_acknowledge',
     category: 'sos',
     resource: { type: 'SOSAlert', id: sosAlert._id, name: sosAlert.alertId },
@@ -450,7 +450,7 @@ const resolveSOS = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'sos_resolve',
     category: 'sos',
     resource: { type: 'SOSAlert', id: sosAlert._id, name: sosAlert.alertId },
@@ -484,8 +484,9 @@ const getAllActiveSOS = asyncHandler(async (req, res) => {
   let query = SOSAlert.findActive();
 
   // Filter by hospital if hospital admin
-  if (req.user.role === 'hospital_admin' && req.user.hospital) {
-    query = query.where('alertedHospitals.hospital').equals(req.user.hospital);
+  if (req.user.accountType === 'hospital' && (req.user.hospitalProfile || req.user.hospital)) {
+    const hospitalId = req.user.hospitalProfile || req.user.hospital;
+    query = query.where('alertedHospitals.hospital').equals(hospitalId);
   }
 
   const alerts = await query;

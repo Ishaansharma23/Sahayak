@@ -50,7 +50,7 @@ const doctorSchema = new mongoose.Schema({
   // Multiple hospital affiliations
   affiliations: [{
     hospital: { type: mongoose.Schema.Types.ObjectId, ref: 'Hospital' },
-    role: String,
+    position: String,
     primary: { type: Boolean, default: false },
   }],
   // Availability
@@ -108,10 +108,10 @@ const doctorSchema = new mongoose.Schema({
     average: { type: Number, default: 0, min: 0, max: 5 },
     count: { type: Number, default: 0 },
   },
-  // Verification
+  // Verification (kept but defaulted to true for simplified flow)
   verified: {
     type: Boolean,
-    default: false,
+    default: true,
   },
   verifiedAt: Date,
   verifiedBy: {
@@ -125,7 +125,7 @@ const doctorSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected', 'suspended'],
-    default: 'pending',
+    default: 'approved',
   },
   rejectionReason: String,
   // Documents
@@ -135,6 +135,7 @@ const doctorSchema = new mongoose.Schema({
     verified: { type: Boolean, default: false },
     uploadedAt: { type: Date, default: Date.now },
   }],
+  certificateUrl: String,
   // Profile
   avatar: String,
   bio: {
@@ -191,7 +192,6 @@ doctorSchema.methods.isAvailableAt = function(dayOfWeek, time) {
  */
 doctorSchema.statics.findAvailable = function(specialization, hospitalId) {
   const query = {
-    verified: true,
     isActive: true,
     availabilityStatus: 'available',
   };

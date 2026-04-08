@@ -54,8 +54,7 @@ const getOrCreateGuestUser = async (patientInfo) => {
     email: `guest+${safePhone}@lifeline.local`,
     phone,
     password,
-    role: 'user',
-    isVerified: true,
+    accountType: 'client',
     isActive: true,
   });
 };
@@ -102,7 +101,6 @@ const createEmergency = asyncHandler(async (req, res) => {
           },
           distanceField: 'distance',
           query: {
-            verified: true,
             isActive: true,
             'ambulances.available': { $gt: 0 },
           },
@@ -169,7 +167,7 @@ const createEmergency = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: requester._id,
     userEmail: requester.email,
-    userRole: requester.role,
+    userRole: requester.accountType,
     action: 'emergency_request',
     category: 'emergency',
     resource: { type: 'Emergency', id: emergency._id, name: emergency.requestId },
@@ -245,7 +243,7 @@ const getEmergency = asyncHandler(async (req, res) => {
   }
 
   // Check authorization
-  if (req.user && req.user.role === 'user' && emergency.requestedBy._id.toString() !== req.user.id) {
+  if (req.user && req.user.accountType === 'client' && emergency.requestedBy._id.toString() !== req.user.id) {
     throw new ErrorResponse('Not authorized', 403);
   }
 
@@ -324,7 +322,7 @@ const acceptEmergency = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'emergency_accept',
     category: 'emergency',
     resource: { type: 'Emergency', id: emergency._id, name: emergency.requestId },
@@ -413,7 +411,7 @@ const updateEmergencyStatus = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: `emergency_${status.toLowerCase()}`,
     category: 'emergency',
     resource: { type: 'Emergency', id: emergency._id, name: emergency.requestId },
@@ -507,7 +505,7 @@ const cancelEmergency = asyncHandler(async (req, res) => {
   }
 
   // Check if user can cancel
-  if (req.user.role === 'user' && emergency.requestedBy.toString() !== req.user.id) {
+  if (req.user.accountType === 'client' && emergency.requestedBy.toString() !== req.user.id) {
     throw new ErrorResponse('Not authorized', 403);
   }
 
@@ -530,7 +528,7 @@ const cancelEmergency = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'emergency_cancel',
     category: 'emergency',
     resource: { type: 'Emergency', id: emergency._id, name: emergency.requestId },

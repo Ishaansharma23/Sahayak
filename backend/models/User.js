@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 
 /**
  * User Schema
- * Supports multiple roles: user, hospital_admin, doctor, super_admin
+ * Supports account types: client, doctor, hospital, admin
  */
 const userSchema = new mongoose.Schema({
   name: {
@@ -33,10 +33,16 @@ const userSchema = new mongoose.Schema({
     minlength: [6, 'Password must be at least 6 characters'],
     select: false, // Don't return password in queries
   },
+  accountType: {
+    type: String,
+    enum: ['client', 'doctor', 'hospital', 'admin'],
+    default: 'client',
+  },
+  // Legacy role field for migration/backfill
   role: {
     type: String,
     enum: ['user', 'hospital_admin', 'doctor', 'super_admin'],
-    default: 'user',
+    select: false,
   },
   avatar: {
     type: String,
@@ -65,7 +71,12 @@ const userSchema = new mongoose.Schema({
       default: [0, 0],
     },
   },
-  // For hospital_admin role
+  // For hospital account type
+  hospitalProfile: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Hospital',
+  },
+  // Legacy field (kept for backfill/compatibility)
   hospital: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Hospital',
@@ -75,13 +86,17 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Doctor',
   },
+  isOnboarded: {
+    type: Boolean,
+    default: false,
+  },
   isActive: {
     type: Boolean,
     default: true,
   },
   isVerified: {
     type: Boolean,
-    default: false,
+    default: true,
   },
   verificationToken: String,
   verificationTokenExpire: Date,
@@ -107,6 +122,16 @@ userSchema.index({ phone: 1 });
 /**
  * Hash password before saving
  */
+const roleToAccountType = (role) => {
+  const map = {
+    user: 'client',
+    doctor: 'doctor',
+    hospital_admin: 'hospital',
+    super_admin: 'admin',
+  };
+  return map[role] || 'client';
+};
+
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) {
     return next();
@@ -132,9 +157,9 @@ userSchema.methods.matchPassword = async function(enteredPassword) {
  */
 userSchema.methods.generateToken = function() {
   return jwt.sign(
-    { 
+    {
       id: this._id,
-      role: this.role,
+      accountType: this.accountType,
     },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRE || '7d' }
@@ -181,5 +206,24 @@ userSchema.methods.resetLoginAttempts = async function() {
     $unset: { lockUntil: 1 },
   });
 };
+
+/**
+ * Backfill hospitalProfile for legacy data
+ */
+userSchema.pre('save', function(next) {
+  if (!this.accountType && this.role) {
+    this.accountType = roleToAccountType(this.role);
+  }
+
+  if (!this.hospitalProfile && this.hospital) {
+    this.hospitalProfile = this.hospital;
+  }
+
+  if (!this.hospital && this.hospitalProfile) {
+    this.hospital = this.hospitalProfile;
+  }
+
+  next();
+});
 
 module.exports = mongoose.model('User', userSchema);

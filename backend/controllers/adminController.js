@@ -1,6 +1,7 @@
 const { User, Hospital, Doctor, Emergency, SOSAlert, AuditLog } = require('../models');
 const { asyncHandler, ErrorResponse } = require('../middleware/errorHandler');
 const { getPagination, paginationResponse } = require('../utils/helpers');
+const { normalizeAccountType } = require('../services/onboardingService');
 
 /**
  * @desc    Get dashboard statistics
@@ -24,7 +25,7 @@ const getDashboardStats = asyncHandler(async (req, res) => {
     recentEmergencies,
     dailyEmergencies,
   ] = await Promise.all([
-    User.countDocuments({ role: 'user' }),
+    User.countDocuments({ accountType: 'client' }),
     Hospital.countDocuments(),
     Hospital.countDocuments({ verified: true }),
     Doctor.countDocuments(),
@@ -123,10 +124,11 @@ const getDashboardStats = asyncHandler(async (req, res) => {
  */
 const getUsers = asyncHandler(async (req, res) => {
   const { page, limit, skip } = getPagination(req.query);
-  const { role, search, isActive } = req.query;
+  const { role, accountType, search, isActive } = req.query;
 
   const queryObj = {};
-  if (role) queryObj.role = role;
+  const filterRole = role || accountType;
+  if (filterRole) queryObj.accountType = normalizeAccountType(filterRole) || filterRole;
   if (isActive !== undefined) queryObj.isActive = isActive === 'true';
   if (search) {
     queryObj.$or = [
@@ -147,23 +149,28 @@ const getUsers = asyncHandler(async (req, res) => {
     User.countDocuments(queryObj),
   ]);
 
+  const result = paginationResponse(users, total, { page, limit });
+
   res.status(200).json({
     success: true,
-    ...paginationResponse(users, total, { page, limit }),
+    users: result.data,
+    total: result.pagination.total,
+    pagination: result.pagination,
   });
 });
 
 /**
- * @desc    Update user role
+ * @desc    Update user account type
  * @route   PUT /api/admin/users/:id/role
  * @access  Private (Super Admin)
  */
 const updateUserRole = asyncHandler(async (req, res) => {
   const { role } = req.body;
 
-  const validRoles = ['user', 'hospital_admin', 'doctor', 'super_admin'];
-  if (!validRoles.includes(role)) {
-    throw new ErrorResponse('Invalid role', 400);
+  const accountType = normalizeAccountType(role || req.body.accountType);
+  const validAccountTypes = ['client', 'doctor', 'hospital', 'admin'];
+  if (!accountType || !validAccountTypes.includes(accountType)) {
+    throw new ErrorResponse('Invalid account type', 400);
   }
 
   const user = await User.findById(req.params.id);
@@ -172,26 +179,26 @@ const updateUserRole = asyncHandler(async (req, res) => {
     throw new ErrorResponse('User not found', 404);
   }
 
-  const previousRole = user.role;
-  user.role = role;
+  const previousRole = user.accountType;
+  user.accountType = accountType;
   await user.save();
 
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'role_change',
     category: 'admin',
     resource: { type: 'User', id: user._id, name: user.name },
-    previousValue: { role: previousRole },
-    newValue: { role },
+    previousValue: { accountType: previousRole },
+    newValue: { accountType },
     ipAddress: req.ip,
     status: 'success',
   });
 
   res.status(200).json({
     success: true,
-    message: 'User role updated',
+    message: 'User account type updated',
     user,
   });
 });
@@ -214,7 +221,7 @@ const toggleUserStatus = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: user.isActive ? 'account_unlock' : 'account_lock',
     category: 'admin',
     resource: { type: 'User', id: user._id, name: user.name },
@@ -246,9 +253,13 @@ const getPendingHospitals = asyncHandler(async (req, res) => {
     Hospital.countDocuments({ status: 'pending' }),
   ]);
 
+  const result = paginationResponse(hospitals, total, { page, limit });
+
   res.status(200).json({
     success: true,
-    ...paginationResponse(hospitals, total, { page, limit }),
+    hospitals: result.data,
+    total: result.pagination.total,
+    pagination: result.pagination,
   });
 });
 
@@ -273,7 +284,7 @@ const verifyHospital = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'hospital_verify',
     category: 'hospital',
     resource: { type: 'Hospital', id: hospital._id, name: hospital.name },
@@ -310,7 +321,7 @@ const rejectHospital = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'hospital_reject',
     category: 'hospital',
     resource: { type: 'Hospital', id: hospital._id, name: hospital.name },
@@ -348,7 +359,7 @@ const suspendHospital = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'hospital_suspend',
     category: 'hospital',
     resource: { type: 'Hospital', id: hospital._id, name: hospital.name },
@@ -382,9 +393,13 @@ const getPendingDoctors = asyncHandler(async (req, res) => {
     Doctor.countDocuments({ status: 'pending' }),
   ]);
 
+  const result = paginationResponse(doctors, total, { page, limit });
+
   res.status(200).json({
     success: true,
-    ...paginationResponse(doctors, total, { page, limit }),
+    doctors: result.data,
+    total: result.pagination.total,
+    pagination: result.pagination,
   });
 });
 
@@ -409,7 +424,7 @@ const verifyDoctor = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'doctor_verify',
     category: 'doctor',
     resource: { type: 'Doctor', id: doctor._id, name: doctor.name },
@@ -446,7 +461,7 @@ const rejectDoctor = asyncHandler(async (req, res) => {
   await AuditLog.log({
     user: req.user._id,
     userEmail: req.user.email,
-    userRole: req.user.role,
+    userRole: req.user.accountType,
     action: 'doctor_reject',
     category: 'doctor',
     resource: { type: 'Doctor', id: doctor._id, name: doctor.name },
@@ -490,9 +505,13 @@ const getAuditLogs = asyncHandler(async (req, res) => {
     AuditLog.countDocuments(queryObj),
   ]);
 
+  const result = paginationResponse(logs, total, { page, limit });
+
   res.status(200).json({
     success: true,
-    ...paginationResponse(logs, total, { page, limit }),
+    logs: result.data,
+    total: result.pagination.total,
+    pagination: result.pagination,
   });
 });
 

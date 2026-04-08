@@ -28,35 +28,35 @@ router.post('/:id/rate', protect, rateEmergency);
 router.get(
   '/hospital/:hospitalId',
   protect,
-  authorize('hospital_admin', 'super_admin'),
+  authorize('hospital', 'admin'),
   getHospitalEmergencies
 );
 
 router.get(
   '/hospital/:hospitalId/active',
   protect,
-  authorize('hospital_admin', 'super_admin'),
+  authorize('hospital', 'admin'),
   getActiveEmergencies
 );
 
 router.put(
   '/:id/accept',
   protect,
-  authorize('hospital_admin', 'super_admin'),
+  authorize('hospital', 'admin'),
   acceptEmergency
 );
 
 router.put(
   '/:id/status',
   protect,
-  authorize('hospital_admin', 'super_admin'),
+  authorize('hospital', 'admin'),
   updateEmergencyStatus
 );
 
 router.put(
   '/:id/location',
   protect,
-  authorize('hospital_admin', 'super_admin'),
+  authorize('hospital', 'admin'),
   updateAmbulanceLocation
 );
 

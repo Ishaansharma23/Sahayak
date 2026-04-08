@@ -1,8 +1,10 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { HiMail, HiLockClosed, HiUser, HiPhone, HiHeart } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
+import { getDashboardPath, normalizeAccountType } from '../../utils/helpers';
+import AccountTypeCards from '../../components/auth/AccountTypeCards';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 
@@ -13,12 +15,20 @@ const Register = () => {
     phone: '',
     password: '',
     confirmPassword: '',
-    role: 'doctor',
   });
+  const [accountType, setAccountType] = useState('client');
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const type = normalizeAccountType(searchParams.get('type'));
+    if (type) {
+      setAccountType(type);
+    }
+  }, [searchParams]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -62,11 +72,16 @@ const Register = () => {
     if (!validate()) return;
 
     setLoading(true);
-    const result = await register(formData);
+    const result = await register({ ...formData, accountType });
     setLoading(false);
 
     if (result.success) {
-      navigate('/dashboard');
+      const user = result.user;
+      if (!user?.isOnboarded) {
+        navigate('/onboarding', { replace: true });
+        return;
+      }
+      navigate(getDashboardPath(user?.accountType), { replace: true });
     }
   };
 
@@ -84,11 +99,15 @@ const Register = () => {
               <HiHeart className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Staff Registration
+              Create Your Account
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">
-              Register for doctor or hospital admin access
+              Choose your account type to get started
             </p>
+          </div>
+
+          <div className="mb-6">
+            <AccountTypeCards value={accountType} onChange={setAccountType} intent="register" />
           </div>
 
           {/* Form */}
@@ -153,43 +172,6 @@ const Register = () => {
               required
             />
 
-            {/* Role Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Register as
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { value: 'doctor', label: 'Doctor', desc: 'Manage schedule and requests' },
-                  { value: 'hospital_admin', label: 'Hospital', desc: 'Manage hospital resources' },
-                ].map((option) => (
-                  <label
-                    key={option.value}
-                    className={`
-                      flex flex-col p-3 rounded-lg border-2 cursor-pointer transition-all
-                      ${formData.role === option.value
-                        ? 'border-primary bg-primary/5'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'
-                      }
-                    `}
-                  >
-                    <input
-                      type="radio"
-                      name="role"
-                      value={option.value}
-                      checked={formData.role === option.value}
-                      onChange={handleChange}
-                      className="sr-only"
-                    />
-                    <span className="font-medium text-gray-900 dark:text-white text-sm">
-                      {option.label}
-                    </span>
-                    <span className="text-xs text-gray-500">{option.desc}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
             {/* Terms */}
             <div className="flex items-start gap-2">
               <input
@@ -211,7 +193,7 @@ const Register = () => {
               loading={loading}
               size="lg"
             >
-              Create Account
+              Get Started
             </Button>
           </form>
 

@@ -101,7 +101,7 @@ const Home = () => {
                 </Link>
                 <Link to="/login">
                   <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-                    Staff Login
+                    Login / Register
                   </Button>
                 </Link>
               </div>

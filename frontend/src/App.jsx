@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { getDashboardPath } from './utils/helpers';
 
 // Layouts
 import MainLayout from './components/layout/MainLayout';
@@ -9,6 +10,7 @@ import DashboardLayout from './components/layout/DashboardLayout';
 import Home from './pages/Home';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import Onboarding from './pages/auth/Onboarding';
 
 // Protected Pages
 import Dashboard from './pages/Dashboard';
@@ -42,7 +44,7 @@ import Loading from './components/common/Loading';
 import NotFound from './pages/NotFound';
 
 // Protected Route Component
-const ProtectedRoute = ({ children, roles }) => {
+const ProtectedRoute = ({ children, roles, allowUnonboarded = false }) => {
   const { isAuthenticated, loading, user } = useAuth();
 
   if (loading) {
@@ -53,8 +55,12 @@ const ProtectedRoute = ({ children, roles }) => {
     return <Navigate to="/login" replace />;
   }
 
-  if (roles && !roles.includes(user?.role)) {
-    return <Navigate to="/dashboard" replace />;
+  if (!allowUnonboarded && user && !user.isOnboarded) {
+    return <Navigate to="/onboarding" replace />;
+  }
+
+  if (roles && !roles.includes(user?.accountType)) {
+    return <Navigate to={getDashboardPath(user?.accountType)} replace />;
   }
 
   return children;
@@ -62,14 +68,17 @@ const ProtectedRoute = ({ children, roles }) => {
 
 // Public Route (redirect if authenticated)
 const PublicRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
 
   if (loading) {
     return <Loading fullScreen />;
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    if (user && !user.isOnboarded) {
+      return <Navigate to="/onboarding" replace />;
+    }
+    return <Navigate to={getDashboardPath(user?.accountType)} replace />;
   }
 
   return children;
@@ -106,6 +115,17 @@ function App() {
         />
       </Route>
 
+      {/* Onboarding */}
+      <Route
+        element={
+          <ProtectedRoute allowUnonboarded>
+            <DashboardLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/onboarding" element={<Onboarding />} />
+      </Route>
+
       {/* Protected User Routes */}
       <Route
         element={
@@ -121,7 +141,7 @@ function App() {
       {/* Hospital Admin Routes */}
       <Route
         element={
-          <ProtectedRoute roles={['hospital_admin', 'super_admin']}>
+          <ProtectedRoute roles={['hospital', 'admin']}>
             <DashboardLayout />
           </ProtectedRoute>
         }
@@ -134,7 +154,7 @@ function App() {
       {/* Doctor Routes */}
       <Route
         element={
-          <ProtectedRoute roles={['doctor', 'super_admin']}>
+          <ProtectedRoute roles={['doctor', 'admin']}>
             <DashboardLayout />
           </ProtectedRoute>
         }
@@ -146,7 +166,7 @@ function App() {
       {/* Admin Routes */}
       <Route
         element={
-          <ProtectedRoute roles={['super_admin']}>
+          <ProtectedRoute roles={['admin']}>
             <DashboardLayout />
           </ProtectedRoute>
         }

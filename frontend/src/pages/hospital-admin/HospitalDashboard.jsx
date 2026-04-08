@@ -45,13 +45,14 @@ const HospitalDashboard = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      if (!user?.hospital) {
+      const hospitalId = user?.hospitalProfile?._id || user?.hospitalProfile || user?.hospital;
+      if (!hospitalId) {
         throw new Error('Hospital profile is missing for this account');
       }
 
       const [statsRes, emergenciesRes] = await Promise.all([
-        hospitalAPI.getStats(user.hospital),
-        emergencyAPI.getActiveEmergencies(user.hospital),
+        hospitalAPI.getStats(hospitalId),
+        emergencyAPI.getActiveEmergencies(hospitalId),
       ]);
 
       if (statsRes.data.success) {

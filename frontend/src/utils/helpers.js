@@ -298,3 +298,35 @@ export const getStatusColor = (status) => {
   };
   return colors[status] || colors.pending;
 };
+
+/**
+ * Normalize account type values
+ */
+export const normalizeAccountType = (value) => {
+  if (!value) return undefined;
+  const normalized = String(value).toLowerCase();
+  const map = {
+    user: 'client',
+    client: 'client',
+    doctor: 'doctor',
+    hospital: 'hospital',
+    hospital_admin: 'hospital',
+    admin: 'admin',
+    super_admin: 'admin',
+  };
+  return map[normalized] || normalized;
+};
+
+/**
+ * Get dashboard route by account type
+ */
+export const getDashboardPath = (accountType) => {
+  const normalized = normalizeAccountType(accountType);
+  const routes = {
+    client: '/dashboard',
+    doctor: '/doctor',
+    hospital: '/hospital-admin',
+    admin: '/admin',
+  };
+  return routes[normalized] || '/dashboard';
+};

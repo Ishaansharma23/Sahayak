@@ -31,7 +31,7 @@ const errorHandler = (err, req, res, next) => {
     AuditLog.log({
       user: req.user?._id,
       userEmail: req.user?.email,
-      userRole: req.user?.role,
+      userRole: req.user?.accountType,
       action: 'other',
       category: 'system',
       details: {

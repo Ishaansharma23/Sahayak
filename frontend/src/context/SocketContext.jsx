@@ -32,7 +32,7 @@ export const SocketProvider = ({ children }) => {
         setIsConnected(true);
         
         // Authenticate socket
-        newSocket.emit('authenticate', { userId: user._id, role: user.role });
+        newSocket.emit('authenticate', { userId: user._id, accountType: user.accountType });
       });
 
       newSocket.on('disconnect', () => {

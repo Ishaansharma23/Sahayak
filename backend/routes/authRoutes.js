@@ -10,6 +10,7 @@ const {
   forgotPassword,
   resetPassword,
   updateLocation,
+  onboarding,
 } = require('../controllers/authController');
 
 const { protect } = require('../middleware/auth');
@@ -30,5 +31,6 @@ router.get('/me', getMe);
 router.put('/profile', authValidators.updateProfile, updateProfile);
 router.put('/password', authValidators.changePassword, changePassword);
 router.put('/location', updateLocation);
+router.put('/onboarding', authValidators.onboarding, onboarding);
 
 module.exports = router;

@@ -19,7 +19,12 @@ import Loading from '../components/common/Loading';
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const [stats, setStats] = useState(null);
+  const [stats, setStats] = useState({
+    hospitalsNearby: 0,
+    doctorsAvailable: 0,
+    ambulancesActive: 0,
+    avgResponseTime: '-',
+  });
   const [nearbyHospitals, setNearbyHospitals] = useState([]);
   const [recentEmergencies, setRecentEmergencies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -42,12 +47,35 @@ const Dashboard = () => {
               limit: 5,
             });
             if (response.data.success) {
-              setNearbyHospitals(response.data.hospitals || []);
+              const hospitals = response.data.hospitals || [];
+              setNearbyHospitals(hospitals);
+              const availableAmbulances = hospitals.reduce(
+                (sum, hospital) => sum + (hospital.ambulances?.available || 0),
+                0
+              );
+              setStats(prev => ({
+                ...prev,
+                hospitalsNearby: hospitals.length,
+                ambulancesActive: availableAmbulances,
+              }));
             }
           } catch (err) {
             console.error('Error fetching nearby hospitals:', err);
           }
         });
+      }
+
+      // Fetch available doctors
+      try {
+        const doctorsRes = await doctorAPI.getAll({ available: 'true', limit: 1 });
+        if (doctorsRes.data.success) {
+          setStats(prev => ({
+            ...prev,
+            doctorsAvailable: doctorsRes.data.total || 0,
+          }));
+        }
+      } catch (err) {
+        console.error('Error fetching doctors:', err);
       }
 
       // Fetch user's emergencies
@@ -60,13 +88,6 @@ const Dashboard = () => {
         console.error('Error fetching emergencies:', err);
       }
 
-      // Set mock stats for now
-      setStats({
-        hospitalsNearby: 12,
-        doctorsAvailable: 45,
-        ambulancesActive: 8,
-        avgResponseTime: '8 min',
-      });
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {

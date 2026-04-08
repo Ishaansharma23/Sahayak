@@ -7,6 +7,7 @@ const doctorRoutes = require('./doctorRoutes');
 const emergencyRoutes = require('./emergencyRoutes');
 const sosRoutes = require('./sosRoutes');
 const adminRoutes = require('./adminRoutes');
+const uploadRoutes = require('./uploadRoutes');
 
 // Mount routes
 router.use('/auth', authRoutes);
@@ -15,6 +16,7 @@ router.use('/doctors', doctorRoutes);
 router.use('/emergencies', emergencyRoutes);
 router.use('/sos', sosRoutes);
 router.use('/admin', adminRoutes);
+router.use('/uploads', uploadRoutes);
 
 // Health check
 router.get('/health', (req, res) => {

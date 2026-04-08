@@ -20,6 +20,7 @@ import Loading from '../../components/common/Loading';
 const DoctorDashboard = () => {
   const [stats, setStats] = useState(null);
   const [appointments, setAppointments] = useState([]);
+  const [doctorProfile, setDoctorProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
@@ -30,35 +31,34 @@ const DoctorDashboard = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const [statsRes, appointmentsRes] = await Promise.all([
-        doctorAPI.getDashboardStats(),
-        doctorAPI.getTodayAppointments(),
-      ]);
-
-      if (statsRes.data.success) {
-        setStats(statsRes.data.stats);
+      const doctorId = user?.doctorProfile?._id || user?.doctorProfile;
+      if (doctorId) {
+        const response = await doctorAPI.getById(doctorId);
+        if (response.data.success) {
+          setDoctorProfile(response.data.doctor);
+          const profileStats = response.data.doctor?.stats || {};
+          setStats({
+            totalPatients: profileStats.totalPatients || 0,
+            todayAppointments: 0,
+            completedToday: 0,
+            pendingToday: 0,
+            rating: response.data.doctor?.rating?.average || 0,
+            totalReviews: response.data.doctor?.rating?.count || 0,
+          });
+        }
       }
-      if (appointmentsRes.data.success) {
-        setAppointments(appointmentsRes.data.appointments || []);
-      }
+      setAppointments([]);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      // Mock data
       setStats({
-        totalPatients: 156,
-        todayAppointments: 8,
-        completedToday: 5,
-        pendingToday: 3,
-        rating: 4.8,
-        totalReviews: 89,
+        totalPatients: 0,
+        todayAppointments: 0,
+        completedToday: 0,
+        pendingToday: 0,
+        rating: 0,
+        totalReviews: 0,
       });
-      setAppointments([
-        { _id: '1', patient: { name: 'Rahul Sharma', phone: '+91 9876543210' }, time: '10:00 AM', type: 'in-person', status: 'completed', reason: 'General Checkup' },
-        { _id: '2', patient: { name: 'Priya Patel', phone: '+91 9876543211' }, time: '10:30 AM', type: 'video', status: 'completed', reason: 'Follow-up' },
-        { _id: '3', patient: { name: 'Amit Kumar', phone: '+91 9876543212' }, time: '11:00 AM', type: 'in-person', status: 'in-progress', reason: 'Chest Pain' },
-        { _id: '4', patient: { name: 'Neha Singh', phone: '+91 9876543213' }, time: '11:30 AM', type: 'video', status: 'pending', reason: 'Consultation' },
-        { _id: '5', patient: { name: 'Vikram Reddy', phone: '+91 9876543214' }, time: '12:00 PM', type: 'in-person', status: 'pending', reason: 'Blood Pressure Check' },
-      ]);
+      setAppointments([]);
     } finally {
       setLoading(false);
     }

@@ -27,7 +27,7 @@ router.get('/:id/schedule', getDoctorSchedule);
 // Protected routes
 router.use(protect);
 
-router.post('/', authorize('doctor', 'hospital_admin', 'super_admin'), doctorValidators.create, createDoctor);
+router.post('/', authorize('doctor', 'hospital', 'admin'), doctorValidators.create, createDoctor);
 
 router.put('/:id', authorizeDoctorOrAdmin, doctorValidators.update, updateDoctor);
 
@@ -37,6 +37,6 @@ router.put('/:id/emergency-toggle', authorizeDoctorOrAdmin, toggleEmergencyAvail
 
 router.put('/:id/schedule', authorizeDoctorOrAdmin, updateSchedule);
 
-router.delete('/:id', authorize('super_admin'), deleteDoctor);
+router.delete('/:id', authorize('admin'), deleteDoctor);
 
 module.exports = router;

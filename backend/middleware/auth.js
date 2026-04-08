@@ -114,10 +114,10 @@ const authorize = (...roles) => {
       });
     }
 
-    if (!roles.includes(req.user.role)) {
+      if (!roles.includes(req.user.accountType)) {
       return res.status(403).json({
         success: false,
-        message: `Role '${req.user.role}' is not authorized to access this route`,
+          message: `Account type '${req.user.accountType}' is not authorized to access this route`,
       });
     }
 
@@ -130,11 +130,11 @@ const authorize = (...roles) => {
  */
 const authorizeHospitalAdmin = async (req, res, next) => {
   try {
-    if (req.user.role === 'super_admin') {
+    if (req.user.accountType === 'admin') {
       return next();
     }
 
-    if (req.user.role !== 'hospital_admin') {
+    if (req.user.accountType !== 'hospital') {
       return res.status(403).json({
         success: false,
         message: 'Not authorized - hospital admin only',
@@ -150,7 +150,8 @@ const authorizeHospitalAdmin = async (req, res, next) => {
       });
     }
 
-    if (req.user.hospital.toString() !== hospitalId) {
+    const hospitalProfileId = req.user.hospitalProfile || req.user.hospital;
+    if (!hospitalProfileId || hospitalProfileId.toString() !== hospitalId) {
       return res.status(403).json({
         success: false,
         message: 'Not authorized to access this hospital',
@@ -168,11 +169,11 @@ const authorizeHospitalAdmin = async (req, res, next) => {
  */
 const authorizeDoctorOrAdmin = async (req, res, next) => {
   try {
-    if (['super_admin', 'hospital_admin'].includes(req.user.role)) {
+    if (['admin', 'hospital'].includes(req.user.accountType)) {
       return next();
     }
 
-    if (req.user.role !== 'doctor') {
+    if (req.user.accountType !== 'doctor') {
       return res.status(403).json({
         success: false,
         message: 'Not authorized',

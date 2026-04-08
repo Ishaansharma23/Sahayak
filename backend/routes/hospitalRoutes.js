@@ -23,25 +23,25 @@ router.get('/:id', getHospital);
 // Protected routes
 router.use(protect);
 
-router.post('/', authorize('hospital_admin', 'super_admin'), hospitalValidators.create, createHospital);
+router.post('/', authorize('hospital', 'admin'), hospitalValidators.create, createHospital);
 
-router.put('/:id', authorize('hospital_admin', 'super_admin'), hospitalValidators.update, updateHospital);
+router.put('/:id', authorize('hospital', 'admin'), hospitalValidators.update, updateHospital);
 
 router.put(
   '/:id/beds',
-  authorize('hospital_admin', 'super_admin'),
+  authorize('hospital', 'admin'),
   hospitalValidators.updateBed,
   updateBedAvailability
 );
 
 router.put(
   '/:id/ambulances',
-  authorize('hospital_admin', 'super_admin'),
+  authorize('hospital', 'admin'),
   updateAmbulanceAvailability
 );
 
-router.get('/:id/stats', authorize('hospital_admin', 'super_admin'), getHospitalStats);
+router.get('/:id/stats', authorize('hospital', 'admin'), getHospitalStats);
 
-router.delete('/:id', authorize('super_admin'), deleteHospital);
+router.delete('/:id', authorize('admin'), deleteHospital);
 
 module.exports = router;

@@ -28,26 +28,26 @@ router.put('/:id/cancel', optionalAuth, cancelSOS);
 router.put('/:id/false-alarm', optionalAuth, markFalseAlarm);
 
 // Hospital Admin / Super Admin routes
-router.get('/all/active', protect, authorize('hospital_admin', 'super_admin'), getAllActiveSOS);
+router.get('/all/active', protect, authorize('hospital', 'admin'), getAllActiveSOS);
 
 router.put(
   '/:id/acknowledge',
   protect,
-  authorize('hospital_admin', 'super_admin'),
+  authorize('hospital', 'admin'),
   acknowledgeSOS
 );
 
 router.post(
   '/:id/responders',
   protect,
-  authorize('hospital_admin', 'super_admin'),
+  authorize('hospital', 'admin'),
   addResponder
 );
 
 router.put(
   '/:id/resolve',
   protect,
-  authorize('hospital_admin', 'super_admin'),
+  authorize('hospital', 'admin'),
   resolveSOS
 );
 

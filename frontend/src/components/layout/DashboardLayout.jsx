@@ -44,7 +44,7 @@ const DashboardLayout = () => {
       { name: 'Profile', href: '/profile', icon: HiUser },
     ];
 
-    if (hasRole('hospital_admin')) {
+    if (hasRole('hospital')) {
       return [
         { name: 'Dashboard', href: '/hospital-admin', icon: HiHome },
         { name: 'Manage Beds', href: '/hospital-admin/beds', icon: HiClipboardList },
@@ -61,7 +61,7 @@ const DashboardLayout = () => {
       ];
     }
 
-    if (hasRole('super_admin')) {
+    if (hasRole('admin')) {
       return [
         { name: 'Admin Dashboard', href: '/admin', icon: HiChartBar },
         { name: 'Manage Users', href: '/admin/users', icon: HiUserGroup },
@@ -135,7 +135,7 @@ const DashboardLayout = () => {
                 {user?.name}
               </p>
               <p className="text-xs text-gray-500 capitalize">
-                {user?.role?.replace('_', ' ')}
+                {user?.accountType}
               </p>
             </div>
           </div>
