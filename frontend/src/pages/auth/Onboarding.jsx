@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { HiClipboardCheck, HiLocationMarker, HiUpload } from 'react-icons/hi';
 import { useAuth } from '../../context/AuthContext';
-import { uploadToImageKit } from '../../services/imagekit';
+import { uploadFile } from '../../services/imagekit';
 import { getDashboardPath, normalizeAccountType } from '../../utils/helpers';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
@@ -121,24 +121,29 @@ const Onboarding = () => {
     setUploading((prev) => ({ ...prev, [target]: true }));
 
     try {
-      const uploaded = await uploadToImageKit({
-        file,
-        folder: `/lifeline/${target}-proof`,
-      });
+      const category = target === 'doctor' ? 'doctors' : 'hospitals';
+      const uploaded = await uploadFile({ file, category });
+      const uploadedUrl = uploaded?.data?.url;
+
+      if (!uploadedUrl) {
+        throw new Error('Upload failed');
+      }
 
       if (target === 'doctor') {
         setDoctorProfile((prev) => ({
           ...prev,
-          certificateUrl: uploaded.url,
+          certificateUrl: uploadedUrl,
         }));
       }
 
       if (target === 'hospital') {
         setHospitalProfile((prev) => ({
           ...prev,
-          certificateUrl: uploaded.url,
+          certificateUrl: uploadedUrl,
         }));
       }
+    } catch (error) {
+      console.error(error);
     } finally {
       setUploading((prev) => ({ ...prev, [target]: false }));
     }

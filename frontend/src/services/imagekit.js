@@ -1,30 +1,18 @@
-import api from './api';
+import axios from 'axios';
 
-const IMAGEKIT_UPLOAD_URL = 'https://upload.imagekit.io/api/v1/files/upload';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
-export const uploadToImageKit = async ({ file, fileName, folder }) => {
-  const authResponse = await api.get('/uploads/imagekit-auth');
-  const { signature, token, expire, publicKey } = authResponse.data;
+export const uploadFile = async ({ file, category }) => {
+  if (!file) {
+    throw new Error('File is required');
+  }
 
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('fileName', fileName || file.name);
-  formData.append('publicKey', publicKey);
-  formData.append('signature', signature);
-  formData.append('token', token);
-  formData.append('expire', expire);
-  if (folder) {
-    formData.append('folder', folder);
-  }
 
-  const response = await fetch(IMAGEKIT_UPLOAD_URL, {
-    method: 'POST',
-    body: formData,
+  const response = await axios.post(`${API_URL}/uploads/${category}`, formData, {
+    withCredentials: true,
   });
 
-  if (!response.ok) {
-    throw new Error('Upload failed');
-  }
-
-  return response.json();
+  return response.data;
 };
